@@ -1,4 +1,13 @@
-import { Building2, CreditCard, ShieldCheck, UsersRound } from "lucide-react";
+import Link from "next/link";
+import {
+  BarChart3,
+  Building2,
+  ClipboardList,
+  CreditCard,
+  Settings2,
+  ShieldCheck,
+  UsersRound,
+} from "lucide-react";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
@@ -80,9 +89,25 @@ export default async function PlatformAdminPage() {
             Super Admin
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Manage tenant lifecycle, subscriptions, plans and platform-level
-            operations from one isolated control surface.
+            Manage tenant lifecycle, subscriptions, plans, metering and
+            platform-level operations from one isolated control surface.
           </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href="/admin/usage"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+            >
+              <BarChart3 className="size-4" />
+              Usage metering
+            </Link>
+            <Link
+              href="/admin/audit"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+            >
+              <ClipboardList className="size-4" />
+              Audit log
+            </Link>
+          </div>
         </div>
         <div className="rounded-xl border border-border bg-card px-4 py-2.5 text-xs text-muted-foreground">
           Signed in as{" "}
@@ -123,8 +148,8 @@ export default async function PlatformAdminPage() {
             <div>
               <h2 className="text-sm font-semibold text-foreground">SaaS plans</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Create private draft plans now; pricing and payment gateway can
-                be added later without changing the tenant model.
+                Create private plans, configure capabilities and apply hard
+                limits without tying the platform to a payment gateway.
               </p>
             </div>
             <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
@@ -159,7 +184,16 @@ export default async function PlatformAdminPage() {
                   </p>
                 ) : null}
               </div>
-              {canManageBilling ? <PlanVisibilityControls plan={plan} /> : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href={`/admin/plans/${plan.id}`}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+                >
+                  <Settings2 className="size-4" />
+                  Configure
+                </Link>
+                {canManageBilling ? <PlanVisibilityControls plan={plan} /> : null}
+              </div>
             </div>
           ))}
           {planOptions.length === 0 ? (
