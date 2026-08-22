@@ -12,10 +12,11 @@ interface AiConfigRow {
   auto_reply_max_per_conversation: number
   handoff_agent_id: string | null
   embeddings_api_key: string | null
+  default_agent_id: string | null
 }
 
 const CONFIG_COLUMNS =
-  'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, embeddings_api_key'
+  'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, embeddings_api_key, default_agent_id'
 
 /**
  * Load and decrypt the account's AI config for *use* (draft or
@@ -44,24 +45,14 @@ export async function loadAiConfig(
   if (!data) return null
 
   const row = data as AiConfigRow
-  // The Playground passes requireActive:false so an admin can test the
-  // agent before flipping the master switch on.
   if (requireActive && !row.is_active) return null
-  // Defensive: the column is NOT NULL, but a partial write / manual DB
-  // edit could leave it empty. Treat a missing key as "not configured"
-  // rather than letting decrypt() throw on null.
   if (!row.api_key) return null
 
-  // The embeddings key is optional and independent of the chat key —
-  // a corrupt/undecryptable one should downgrade to lexical KB, not
-  // take down draft/auto-reply, so decrypt failures are swallowed here.
   let embeddingsApiKey: string | null = null
   if (row.embeddings_api_key) {
     try {
       embeddingsApiKey = decrypt(row.embeddings_api_key)
     } catch {
-      // Not silent — a rotated/mismatched ENCRYPTION_KEY here means
-      // semantic search quietly stops working, so leave a breadcrumb.
       console.error(
         `[ai config] embeddings key for account ${accountId} could not be decrypted — check ENCRYPTION_KEY; semantic search is disabled until it is re-entered.`,
       )
@@ -78,6 +69,7 @@ export async function loadAiConfig(
     autoReplyEnabled: row.auto_reply_enabled,
     autoReplyMaxPerConversation: row.auto_reply_max_per_conversation,
     handoffAgentId: row.handoff_agent_id,
+    defaultAgentId: row.default_agent_id,
     embeddingsApiKey,
   }
 }
@@ -87,11 +79,6 @@ export async function loadAiConfig(
  * Used by the knowledge-base ingest routes so the KB gets embedded (and
  * semantic search works) whenever an embeddings key is present, even if
  * the assistant's master switch is currently off.
- *
- * Returns `{ key, corrupt }`: `key` is null when there's no key OR it
- * can't be decrypted; `corrupt` distinguishes those cases so callers can
- * warn ("a key is set but unusable") rather than silently indexing
- * lexical-only and reporting success.
  */
 export async function loadEmbeddingsKey(
   db: SupabaseClient,
