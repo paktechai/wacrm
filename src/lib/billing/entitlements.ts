@@ -6,6 +6,7 @@ export type LimitMap = Record<string, number | null>;
 
 export interface AccountEntitlements {
   accountId: string;
+  lifecycleStatus: string | null;
   subscriptionStatus: string | null;
   planId: string | null;
   planCode: string | null;
@@ -41,20 +42,31 @@ function normalizeLimits(value: unknown): LimitMap {
 }
 
 /**
- * Load the account's current plan without relying on PostgREST embedded
- * relationship inference. The app has previously seen schema-cache drift,
- * so subscription and plan are intentionally fetched as two point queries.
+ * Load account lifecycle + current subscription + plan without relying on
+ * PostgREST embedded relationship inference. The app has previously seen
+ * schema-cache drift, so each relationship is intentionally a point query.
  */
 export async function getAccountEntitlements(
   supabase: SupabaseClient,
   accountId: string,
 ): Promise<AccountEntitlements> {
-  const { data: subscription, error: subscriptionError } = await supabase
-    .from("account_subscriptions")
-    .select("plan_id, status")
-    .eq("account_id", accountId)
-    .maybeSingle();
+  const [{ data: account, error: accountError }, { data: subscription, error: subscriptionError }] =
+    await Promise.all([
+      supabase
+        .from("accounts")
+        .select("lifecycle_status")
+        .eq("id", accountId)
+        .maybeSingle(),
+      supabase
+        .from("account_subscriptions")
+        .select("plan_id, status")
+        .eq("account_id", accountId)
+        .maybeSingle(),
+    ]);
 
+  if (accountError) {
+    throw new Error(`Could not load account lifecycle: ${accountError.message}`);
+  }
   if (subscriptionError) {
     throw new Error(`Could not load subscription: ${subscriptionError.message}`);
   }
@@ -62,6 +74,7 @@ export async function getAccountEntitlements(
   if (!subscription?.plan_id) {
     return {
       accountId,
+      lifecycleStatus: account?.lifecycle_status ?? null,
       subscriptionStatus: subscription?.status ?? null,
       planId: null,
       planCode: null,
@@ -83,6 +96,7 @@ export async function getAccountEntitlements(
 
   return {
     accountId,
+    lifecycleStatus: account?.lifecycle_status ?? null,
     subscriptionStatus: subscription.status ?? null,
     planId: plan?.id ?? subscription.plan_id,
     planCode: plan?.code ?? null,
@@ -90,6 +104,35 @@ export async function getAccountEntitlements(
     features: normalizeFeatures(plan?.features),
     limits: normalizeLimits(plan?.limits),
   };
+}
+
+/**
+ * Service-level guard used by server routes before an external side effect.
+ * Database RLS separately blocks tenant writes when lifecycle is suspended or
+ * cancelled, but routes that call Meta/AI must reject BEFORE contacting an
+ * external provider because RLS cannot undo an already-sent message.
+ */
+export async function requireAccountService(
+  supabase: SupabaseClient,
+  accountId: string,
+): Promise<AccountEntitlements> {
+  const entitlements = await getAccountEntitlements(supabase, accountId);
+
+  if (
+    entitlements.lifecycleStatus === "suspended" ||
+    entitlements.lifecycleStatus === "cancelled"
+  ) {
+    throw new ForbiddenError("This workspace is not currently active");
+  }
+
+  if (
+    entitlements.subscriptionStatus === "paused" ||
+    entitlements.subscriptionStatus === "cancelled"
+  ) {
+    throw new ForbiddenError("This subscription is not currently active");
+  }
+
+  return entitlements;
 }
 
 export function requireFeature(
