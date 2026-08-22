@@ -119,8 +119,8 @@ export async function POST(request: Request) {
       const admin = supabaseAdmin();
       void logAiUsage(admin, {
         accountId,
-        conversationId: conversationId ?? undefined,
-        mode: "copilot",
+        conversationId,
+        mode: "draft",
         provider: config.provider,
         model: config.model,
         usage,
@@ -137,12 +137,9 @@ export async function POST(request: Request) {
     const updates: Record<string, unknown> = {};
     let result: unknown = text;
 
-    if (conversationId && action === "summary") {
-      updates.ai_summary = text.slice(0, 4000);
-    }
-    if (conversationId && action === "next_action") {
-      updates.next_action = text.slice(0, 1000);
-    }
+    if (conversationId && action === "summary") updates.ai_summary = text.slice(0, 4000);
+    if (conversationId && action === "next_action") updates.next_action = text.slice(0, 1000);
+
     if (conversationId && action === "analyze") {
       const parsed = parseJsonObject(text);
       if (!parsed) {
@@ -152,8 +149,7 @@ export async function POST(request: Request) {
         ? String(parsed.sentiment)
         : "unknown";
       const intent = typeof parsed.intent === "string" ? parsed.intent.slice(0, 240) : null;
-      const nextAction =
-        typeof parsed.next_action === "string" ? parsed.next_action.slice(0, 1000) : null;
+      const nextAction = typeof parsed.next_action === "string" ? parsed.next_action.slice(0, 1000) : null;
       const rawScore = Number(parsed.lead_score);
       const leadScore = Number.isFinite(rawScore) ? Math.max(0, Math.min(100, Math.round(rawScore))) : 0;
       updates.customer_sentiment = sentiment;
@@ -170,25 +166,23 @@ export async function POST(request: Request) {
     }
 
     if (conversationId && Object.keys(updates).length > 0) {
-      await supabase
+      const { error: updateError } = await supabase
         .from("conversations")
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq("id", conversationId)
         .eq("account_id", accountId);
+      if (updateError) throw updateError;
     }
 
-    try {
-      await supabase.from("ai_copilot_events").insert({
-        account_id: accountId,
-        user_id: userId,
-        conversation_id: conversationId,
-        action,
-        output_language: action === "translate" ? targetLanguage : null,
-        metadata: { persisted: Object.keys(updates).length > 0 },
-      });
-    } catch (eventError) {
-      console.error("[ai/copilot] event logging failed", eventError);
-    }
+    const { error: eventError } = await supabase.from("ai_copilot_events").insert({
+      account_id: accountId,
+      user_id: userId,
+      conversation_id: conversationId,
+      action,
+      output_language: action === "translate" ? targetLanguage : null,
+      metadata: { persisted: Object.keys(updates).length > 0 },
+    });
+    if (eventError) console.error("[ai/copilot] event logging failed", eventError);
 
     void writeTenantAudit({
       accountId,
