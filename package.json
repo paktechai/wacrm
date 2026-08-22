@@ -1,11 +1,11 @@
 {
-  "name": "wacrm",
-  "version": "0.8.0",
+  "name": "sbyt-crm",
+  "version": "0.9.0",
   "private": true,
   "description": "SBYT CRM — WhatsApp-first AI customer engagement, CRM, marketing and automation software by Sajid Byte Tech Solutions.",
   "license": "MIT",
   "author": "Sajid Byte Tech Solutions",
-  "homepage": "https://app.sbyt.app",
+  "homepage": "https://crm.sbyt.app",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/paktechai/wacrm.git"
