@@ -3,6 +3,13 @@ import { ArrowLeft, BarChart3 } from "lucide-react";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 
+type UsageMetric = { metric: string; quantity: number };
+type TenantUsage = {
+  accountId: string;
+  accountName: string;
+  metrics: UsageMetric[];
+};
+
 export default async function PlatformUsagePage() {
   const admin = createAdminClient();
   const now = new Date();
@@ -24,13 +31,10 @@ export default async function PlatformUsagePage() {
   if (accountsError) throw accountsError;
 
   const accountName = new Map((accounts ?? []).map((row) => [row.id, row.name] as const));
-  const grouped = new Map<
-    string,
-    { accountId: string; accountName: string; metrics: { metric: string; quantity: number }[] }
-  >();
+  const grouped = new Map<string, TenantUsage>();
 
   for (const row of usage ?? []) {
-    const current = grouped.get(row.account_id) ?? {
+    const current: TenantUsage = grouped.get(row.account_id) ?? {
       accountId: row.account_id,
       accountName: accountName.get(row.account_id) ?? "Unknown account",
       metrics: [],
