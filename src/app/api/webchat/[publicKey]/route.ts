@@ -136,12 +136,14 @@ export async function POST(
 
     const admin = createAdminClient();
     const tokenHash = hashToken(visitorToken);
-    let { data: mapping, error: mappingError } = await admin
+    const mappingResult = await admin
       .from("webchat_visitors")
       .select("id, contact_id, conversation_id")
       .eq("widget_id", widget.id)
       .eq("visitor_token_hash", tokenHash)
       .maybeSingle();
+    let mapping = mappingResult.data;
+    const mappingError = mappingResult.error;
     if (mappingError) throw mappingError;
 
     if (!mapping) {
@@ -159,12 +161,14 @@ export async function POST(
       const displayName = body && typeof body.name === "string" ? body.name.trim().slice(0, 120) : "Website visitor";
       const email = body && typeof body.email === "string" ? body.email.trim().slice(0, 320) || null : null;
 
-      let { data: contact, error: contactError } = await admin
+      const contactResult = await admin
         .from("contacts")
         .select("id")
         .eq("account_id", widget.account_id)
         .eq("phone", phone)
         .maybeSingle();
+      let contact = contactResult.data;
+      const contactError = contactResult.error;
       if (contactError) throw contactError;
       if (!contact) {
         const created = await admin
