@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { BrainCircuit, Languages, ListChecks, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -66,8 +66,7 @@ export function CopilotWorkbench() {
     }
   }
 
-  async function transform(event: FormEvent<HTMLFormElement>, action: "rewrite" | "translate") {
-    event.preventDefault();
+  async function transform(action: "rewrite" | "translate") {
     if (!text.trim() || running) return;
     setRunning(true);
     setResult(null);
@@ -108,11 +107,17 @@ export function CopilotWorkbench() {
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center gap-2"><Languages className="size-4 text-primary" /><h2 className="font-semibold text-foreground">Rewrite & translate</h2></div>
-        <form onSubmit={(event) => void transform(event, "rewrite")} className="mt-4 space-y-3">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void transform("rewrite");
+          }}
+          className="mt-4 space-y-3"
+        >
           <textarea value={text} onChange={(event) => setText(event.target.value)} rows={7} placeholder="Paste a draft reply here…" className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm leading-6 outline-none focus:border-primary" />
           <div className="flex gap-2">
             <input value={targetLanguage} onChange={(event) => setTargetLanguage(event.target.value)} placeholder="Target language" className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
-            <button type="button" disabled={!text.trim() || running} onClick={(event) => void transform({ preventDefault: () => undefined } as FormEvent<HTMLFormElement>, "translate")} className="rounded-xl border border-border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50">Translate</button>
+            <button type="button" disabled={!text.trim() || running} onClick={() => void transform("translate")} className="rounded-xl border border-border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50">Translate</button>
             <button disabled={!text.trim() || running} className="rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">Rewrite</button>
           </div>
         </form>
