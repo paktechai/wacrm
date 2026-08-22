@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,10 +15,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { MessageSquare, CheckCircle, UsersRound } from "lucide-react";
+import { ArrowRight, CheckCircle2, UsersRound } from "lucide-react";
 
-// `useSearchParams` opts the component out of static prerendering
-// unless wrapped in Suspense — same pattern as /login.
 export default function SignupPage() {
   return (
     <Suspense fallback={null}>
@@ -28,11 +27,6 @@ export default function SignupPage() {
 
 function SignupPageInner() {
   const searchParams = useSearchParams();
-  // When the user lands here from `/join/<token>` we carry the
-  // invite token in the query so it survives the signup → email
-  // verification → redirect round-trip. `emailRedirectTo` below
-  // points back at /join/<token> so the user lands on the redeem
-  // step after verifying instead of being dropped on /dashboard.
   const inviteToken = searchParams.get("invite");
 
   const [fullName, setFullName] = useState("");
@@ -60,10 +54,6 @@ function SignupPageInner() {
 
     setLoading(true);
 
-    // If we have an invite token, point Supabase's verification
-    // email back at the join page so the user can accept after
-    // verifying. Without a token, Supabase uses its default
-    // redirect (the app root).
     const emailRedirectTo = inviteToken
       ? `${window.location.origin}/join/${encodeURIComponent(inviteToken)}`
       : undefined;
@@ -91,20 +81,22 @@ function SignupPageInner() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-md border-border bg-card">
-          <CardHeader className="items-center text-center">
-            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-              <CheckCircle className="h-6 w-6 text-primary" />
+      <AuthShell>
+        <Card className="border-border/70 bg-card/80 shadow-2xl shadow-black/10 backdrop-blur-xl">
+          <CardHeader className="items-center space-y-4 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-400/20 bg-teal-400/10 text-teal-400">
+              <CheckCircle2 className="h-7 w-7" />
             </div>
-            <CardTitle className="text-xl text-foreground">
-              Check your email
-            </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              We&apos;ve sent a confirmation link to{" "}
-              <span className="text-foreground">{email}</span>. Please check your
-              inbox and click the link to verify your account.
-            </CardDescription>
+            <div>
+              <CardTitle className="text-2xl font-semibold tracking-[-0.035em] text-foreground">
+                Check your email
+              </CardTitle>
+              <CardDescription className="mt-2 leading-6 text-muted-foreground">
+                We sent a confirmation link to{" "}
+                <span className="font-medium text-foreground">{email}</span>.
+                Verify your email to activate your SBYT account.
+              </CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
             <Link
@@ -116,115 +108,112 @@ function SignupPageInner() {
             >
               <Button
                 variant="outline"
-                className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="h-11 w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 Back to sign in
               </Button>
             </Link>
           </CardContent>
         </Card>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md border-border bg-card">
-        <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            {inviteToken ? (
-              <UsersRound className="h-6 w-6 text-primary" />
-            ) : (
-              <MessageSquare className="h-6 w-6 text-primary" />
-            )}
+    <AuthShell>
+      <Card className="border-border/70 bg-card/80 shadow-2xl shadow-black/10 backdrop-blur-xl">
+        <CardHeader className="space-y-4 pb-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
+              {inviteToken ? (
+                <UsersRound className="h-5 w-5" />
+              ) : (
+                <span className="text-xs font-black tracking-[-0.08em]">S</span>
+              )}
+            </div>
+            <span className="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+              One SBYT account
+            </span>
           </div>
-          <CardTitle className="text-xl text-foreground">
-            {inviteToken ? "Create account & join" : "Create account"}
-          </CardTitle>
-          <CardDescription className="text-muted-foreground">
-            {inviteToken
-              ? "Verify your email, then accept the invitation to join your team."
-              : "Get started with CRM Template for WhatsApp"}
-          </CardDescription>
+          <div>
+            <CardTitle className="text-2xl font-semibold tracking-[-0.035em] text-foreground">
+              {inviteToken ? "Create account & join" : "Create your SBYT account"}
+            </CardTitle>
+            <CardDescription className="mt-2 leading-6 text-muted-foreground">
+              {inviteToken
+                ? "Verify your email, then accept the invitation to join your team."
+                : "Start with SBYT CRM and use the same account across future SBYT software."}
+            </CardDescription>
+          </div>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSignup} className="flex flex-col gap-4">
             {error && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              <div
+                role="alert"
+                className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+              >
                 {error}
               </div>
             )}
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="fullName" className="text-muted-foreground">
-                Full name
-              </Label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="John Doe"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email" className="text-muted-foreground">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password" className="text-muted-foreground">
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="At least 6 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="confirmPassword" className="text-muted-foreground">
-                Confirm password
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Repeat your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
-              />
-            </div>
+            <Field
+              id="fullName"
+              label="Full name"
+              type="text"
+              autoComplete="name"
+              placeholder="Your name"
+              value={fullName}
+              onChange={setFullName}
+            />
+            <Field
+              id="email"
+              label="Email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={setEmail}
+            />
+            <Field
+              id="password"
+              label="Password"
+              type="password"
+              autoComplete="new-password"
+              placeholder="At least 6 characters"
+              value={password}
+              onChange={setPassword}
+            />
+            <Field
+              id="confirmPassword"
+              label="Confirm password"
+              type="password"
+              autoComplete="new-password"
+              placeholder="Repeat your password"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+            />
 
             <Button
               type="submit"
               disabled={loading}
-              className="mt-2 h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="mt-2 h-11 w-full gap-2 bg-primary text-primary-foreground shadow-lg shadow-primary/15 hover:bg-primary/90 disabled:opacity-50"
             >
               {loading ? "Creating account..." : "Create account"}
+              {!loading && <ArrowRight className="size-4" />}
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="my-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              SBYT ecosystem
+            </span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <p className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link
               href={
@@ -232,13 +221,49 @@ function SignupPageInner() {
                   ? `/login?invite=${encodeURIComponent(inviteToken)}`
                   : "/login"
               }
-              className="text-primary hover:text-primary/80"
+              className="font-semibold text-primary transition-colors hover:text-primary/80"
             >
               Sign in
             </Link>
           </p>
         </CardContent>
       </Card>
+    </AuthShell>
+  );
+}
+
+function Field({
+  id,
+  label,
+  type,
+  autoComplete,
+  placeholder,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  type: string;
+  autoComplete: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id} className="text-xs font-medium text-muted-foreground">
+        {label}
+      </Label>
+      <Input
+        id={id}
+        type={type}
+        autoComplete={autoComplete}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required
+        className="h-11 border-border bg-muted/60 text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
+      />
     </div>
   );
 }
