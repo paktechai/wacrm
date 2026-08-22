@@ -18,6 +18,7 @@ import {
   LogOut,
   MessageSquare,
   Radio,
+  Rocket,
   Settings,
   Shield,
   User,
@@ -95,6 +96,7 @@ type BottomNavItem = {
 };
 
 const bottomNavItems: BottomNavItem[] = [
+  { href: "/onboarding", label: "Setup", icon: Rocket },
   { href: "/billing", label: "Plan & usage", icon: CreditCard },
   { href: "/settings", labelKey: "settings", icon: Settings },
 ];
