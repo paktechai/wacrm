@@ -41,28 +41,25 @@ function normalizeLimits(value: unknown): LimitMap {
   return result;
 }
 
-/**
- * Load account lifecycle + current subscription + plan without relying on
- * PostgREST embedded relationship inference. The app has previously seen
- * schema-cache drift, so each relationship is intentionally a point query.
- */
 export async function getAccountEntitlements(
   supabase: SupabaseClient,
   accountId: string,
 ): Promise<AccountEntitlements> {
-  const [{ data: account, error: accountError }, { data: subscription, error: subscriptionError }] =
-    await Promise.all([
-      supabase
-        .from("accounts")
-        .select("lifecycle_status")
-        .eq("id", accountId)
-        .maybeSingle(),
-      supabase
-        .from("account_subscriptions")
-        .select("plan_id, status")
-        .eq("account_id", accountId)
-        .maybeSingle(),
-    ]);
+  const [
+    { data: account, error: accountError },
+    { data: subscription, error: subscriptionError },
+  ] = await Promise.all([
+    supabase
+      .from("accounts")
+      .select("lifecycle_status")
+      .eq("id", accountId)
+      .maybeSingle(),
+    supabase
+      .from("account_subscriptions")
+      .select("plan_id, status")
+      .eq("account_id", accountId)
+      .maybeSingle(),
+  ]);
 
   if (accountError) {
     throw new Error(`Could not load account lifecycle: ${accountError.message}`);
@@ -106,12 +103,6 @@ export async function getAccountEntitlements(
   };
 }
 
-/**
- * Service-level guard used by server routes before an external side effect.
- * Database RLS separately blocks tenant writes when lifecycle is suspended or
- * cancelled, but routes that call Meta/AI must reject BEFORE contacting an
- * external provider because RLS cannot undo an already-sent message.
- */
 export async function requireAccountService(
   supabase: SupabaseClient,
   accountId: string,
@@ -139,6 +130,16 @@ export function requireFeature(
   entitlements: AccountEntitlements,
   feature: string,
 ): void {
+  // Backwards-compatible escape hatch for an installation that has not yet
+  // applied migration 041. Once a subscription row exists, plan feature
+  // enforcement is strict — including an intentionally unassigned plan.
+  if (
+    entitlements.subscriptionStatus === null &&
+    entitlements.planId === null
+  ) {
+    return;
+  }
+
   if (entitlements.features[feature] !== true) {
     throw new ForbiddenError(`Your current plan does not include '${feature}'`);
   }
@@ -164,10 +165,6 @@ export async function getCurrentMonthUsage(
   return Number(data?.quantity ?? 0);
 }
 
-/**
- * Server-side guard for metered features.
- * A null/missing limit means "not capped by this plan record".
- */
 export async function requireUsageAvailable(
   supabase: SupabaseClient,
   entitlements: AccountEntitlements,
