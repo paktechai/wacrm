@@ -1,13 +1,5 @@
 import { ImageResponse } from "next/og";
 
-// Replaces the default Next.js favicon with the brand mark — Hostinger
-// violet rounded square + white chat-square glyph — matching the
-// sidebar logo in `src/components/layout/sidebar.tsx`. Next.js renders
-// this at build time and auto-injects <link rel="icon"> into <head>.
-//
-// This route takes precedence over src/app/favicon.ico, which is the
-// Next.js default and can stay on disk harmlessly (or be removed).
-
 export const runtime = "edge";
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
@@ -22,21 +14,15 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#7c3aed", // primary (Hostinger-aligned purple)
-          borderRadius: 6,
+          background: "linear-gradient(135deg,#7A7CFF 0%,#5265FF 58%,#2DD4BF 100%)",
+          borderRadius: 8,
         }}
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        <svg width="24" height="24" viewBox="0 0 64 64" fill="none">
+          <path
+            d="M14 21.5A7.5 7.5 0 0 1 21.5 14H47l-8 8H23v7h18.5A8.5 8.5 0 0 1 50 37.5 8.5 8.5 0 0 1 41.5 46H14l8-8h18a.5.5 0 0 0 0-1H22.5A8.5 8.5 0 0 1 14 28.5v-7Z"
+            fill="#ffffff"
+          />
         </svg>
       </div>
     ),
