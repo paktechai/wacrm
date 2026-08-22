@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bot, Sparkles, Settings2, BarChart3, UsersRound } from 'lucide-react';
+import { Bot, Sparkles, Settings2, BarChart3, UsersRound, WandSparkles } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AiPlayground } from '@/components/agents/ai-playground';
 import { AiUsageCard } from '@/components/agents/ai-usage';
 import { AgentProfiles } from '@/components/agents/agent-profiles';
+import { CopilotWorkbench } from '@/components/agents/copilot-workbench';
 import { AiConfig } from '@/components/settings/ai-config';
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
 
-type Tab = 'profiles' | 'playground' | 'setup' | 'usage';
+type Tab = 'profiles' | 'copilot' | 'playground' | 'setup' | 'usage';
 
 export default function AgentsPage() {
   const { accountRole } = useAuth();
@@ -45,18 +46,17 @@ export default function AgentsPage() {
         </h1>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
-        Build focused autonomous agents, test responses, and manage the shared BYO AI provider safely.
+        Build focused autonomous agents, analyze customer conversations, translate and rewrite replies, and manage the shared BYO AI provider safely.
       </p>
 
       {decided && (
-        <Tabs
-          value={tab}
-          onValueChange={(v) => setTab(v as Tab)}
-          className="mt-6"
-        >
+        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mt-6">
           <TabsList className="flex h-auto flex-wrap">
             <TabsTrigger value="profiles">
               <UsersRound className="mr-1.5 h-4 w-4" /> Agent profiles
+            </TabsTrigger>
+            <TabsTrigger value="copilot">
+              <WandSparkles className="mr-1.5 h-4 w-4" /> Copilot
             </TabsTrigger>
             <TabsTrigger value="playground">
               <Sparkles className="mr-1.5 h-4 w-4" /> Playground
@@ -71,23 +71,11 @@ export default function AgentsPage() {
             )}
           </TabsList>
 
-          <TabsContent value="profiles" className="mt-4">
-            <AgentProfiles />
-          </TabsContent>
-
-          <TabsContent value="playground" className="mt-4">
-            <AiPlayground onGoToSetup={() => setTab('setup')} />
-          </TabsContent>
-
-          <TabsContent value="setup" className="mt-4">
-            <AiConfig />
-          </TabsContent>
-
-          {canViewUsage && (
-            <TabsContent value="usage" className="mt-4">
-              <AiUsageCard />
-            </TabsContent>
-          )}
+          <TabsContent value="profiles" className="mt-4"><AgentProfiles /></TabsContent>
+          <TabsContent value="copilot" className="mt-4"><CopilotWorkbench /></TabsContent>
+          <TabsContent value="playground" className="mt-4"><AiPlayground onGoToSetup={() => setTab('setup')} /></TabsContent>
+          <TabsContent value="setup" className="mt-4"><AiConfig /></TabsContent>
+          {canViewUsage && <TabsContent value="usage" className="mt-4"><AiUsageCard /></TabsContent>}
         </Tabs>
       )}
     </div>
