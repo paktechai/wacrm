@@ -1,14 +1,7 @@
 // ============================================================
 // Server-side account context — for API routes and server
-// components. Reads the caller's profile + account in one round
-// trip and verifies role on demand.
-//
-// IMPORTANT: this module is server-only. It imports the Supabase
-// SSR client (`@/lib/supabase/server`), which reads `next/headers`
-// cookies. Importing it from a client component will fail at
-// build time with the standard Next.js "You're importing a
-// component that needs `next/headers`" error — that's the
-// boundary check; we don't need the `server-only` package.
+// components. Reads the caller's profile + account and verifies role
+// on demand.
 // ============================================================
 
 import { NextResponse } from "next/server";
@@ -50,6 +43,7 @@ export interface AccountContext {
     id: string;
     name: string;
     lifecycleStatus: string;
+    requireMfa: boolean;
   };
 }
 
@@ -83,7 +77,7 @@ export async function getCurrentAccount(): Promise<AccountContext> {
 
   const { data: account, error: accountErr } = await supabase
     .from("accounts")
-    .select("id, name, lifecycle_status")
+    .select("id, name, lifecycle_status, require_mfa")
     .eq("id", data.account_id)
     .maybeSingle();
 
@@ -104,6 +98,7 @@ export async function getCurrentAccount(): Promise<AccountContext> {
       id: account.id,
       name: account.name,
       lifecycleStatus: account.lifecycle_status ?? "active",
+      requireMfa: account.require_mfa === true,
     },
   };
 }
@@ -122,6 +117,24 @@ export async function requireRole(min: AccountRole): Promise<AccountContext> {
       ctx.account.lifecycleStatus === "cancelled")
   ) {
     throw new ForbiddenError("This workspace is currently read-only");
+  }
+
+  // Enterprise MFA is enforced twice:
+  // 1) here, before API routes perform external side effects; and
+  // 2) by is_account_operational() in RLS for direct Supabase writes.
+  // Read-only viewer calls stay available so users can reach the MFA UI.
+  if (min !== "viewer" && ctx.account.requireMfa) {
+    const { data: aal, error: aalError } =
+      await ctx.supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aalError) {
+      console.error("[requireRole] MFA assurance check failed:", aalError);
+      throw new ForbiddenError("Could not verify multi-factor authentication");
+    }
+    if (aal.currentLevel !== "aal2") {
+      throw new ForbiddenError(
+        "Multi-factor authentication is required for this workspace",
+      );
+    }
   }
 
   return ctx;
