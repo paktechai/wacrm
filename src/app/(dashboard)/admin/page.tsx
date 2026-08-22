@@ -1,6 +1,13 @@
 import { Building2, CreditCard, ShieldCheck, UsersRound } from "lucide-react";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
+import {
+  AccountAdminControls,
+  CreatePlanForm,
+  PlanVisibilityControls,
+  type AdminPlanOption,
+} from "./admin-controls";
 
 export default async function PlatformAdminPage() {
   const platformAdmin = await requirePlatformAdmin();
@@ -36,7 +43,11 @@ export default async function PlatformAdminPage() {
     admin
       .from("account_subscriptions")
       .select("account_id, plan_id, status, current_period_end"),
-    admin.from("saas_plans").select("id, code, name, is_active"),
+    admin
+      .from("saas_plans")
+      .select("id, code, name, description, is_active, is_public")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
   ]);
 
   if (accountsError || subscriptionsError || plansError) {
@@ -47,14 +58,15 @@ export default async function PlatformAdminPage() {
     });
   }
 
-  const planById = new Map(
-    (plans ?? []).map((plan) => [plan.id, plan] as const),
-  );
+  const planOptions = (plans ?? []) as AdminPlanOption[];
+  const planById = new Map(planOptions.map((plan) => [plan.id, plan] as const));
   const subscriptionByAccount = new Map(
     (subscriptions ?? []).map(
       (subscription) => [subscription.account_id, subscription] as const,
     ),
   );
+  const canManageBilling = platformAdmin.role !== "support";
+  const canChangeLifecycle = platformAdmin.role === "super_admin";
 
   return (
     <div className="mx-auto w-full max-w-[1500px] space-y-7 p-4 sm:p-6 lg:p-8">
@@ -73,7 +85,10 @@ export default async function PlatformAdminPage() {
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card px-4 py-2.5 text-xs text-muted-foreground">
-          Signed in as <span className="font-medium text-foreground">{platformAdmin.email ?? platformAdmin.userId}</span>
+          Signed in as{" "}
+          <span className="font-medium text-foreground">
+            {platformAdmin.email ?? platformAdmin.userId}
+          </span>
           <span className="mx-2 text-border">•</span>
           {platformAdmin.role.replaceAll("_", " ")}
         </div>
@@ -102,12 +117,65 @@ export default async function PlatformAdminPage() {
         />
       </section>
 
+      <section className="rounded-2xl border border-border bg-card">
+        <div className="border-b border-border px-5 py-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">SaaS plans</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Create private draft plans now; pricing and payment gateway can
+                be added later without changing the tenant model.
+              </p>
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              {planOptions.length} plan{planOptions.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          {canManageBilling ? (
+            <div className="mt-4">
+              <CreatePlanForm />
+            </div>
+          ) : null}
+        </div>
+
+        <div className="divide-y divide-border">
+          {planOptions.map((plan) => (
+            <div
+              key={plan.id}
+              className="flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"
+            >
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium text-foreground">{plan.name}</span>
+                  <span className="rounded-full border border-border bg-muted px-2 py-0.5 font-mono text-[9px] text-muted-foreground">
+                    {plan.code}
+                  </span>
+                  <StatusBadge value={plan.is_active ? "active" : "inactive"} />
+                  <StatusBadge value={plan.is_public ? "public" : "private"} />
+                </div>
+                {plan.description ? (
+                  <p className="mt-1.5 max-w-3xl text-xs leading-5 text-muted-foreground">
+                    {plan.description}
+                  </p>
+                ) : null}
+              </div>
+              {canManageBilling ? <PlanVisibilityControls plan={plan} /> : null}
+            </div>
+          ))}
+          {planOptions.length === 0 ? (
+            <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+              No plans yet. Create the first SBYT CRM plan above.
+            </div>
+          ) : null}
+        </div>
+      </section>
+
       <section className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-4">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Tenant accounts</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Latest 50 workspaces with lifecycle and subscription state.
+              Latest 50 workspaces with lifecycle and subscription controls.
             </p>
           </div>
           <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -116,7 +184,7 @@ export default async function PlatformAdminPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[850px] text-left text-sm">
+          <table className="w-full min-w-[1100px] text-left text-sm">
             <thead className="bg-muted/40 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3 font-semibold">Account</th>
@@ -124,6 +192,7 @@ export default async function PlatformAdminPage() {
                 <th className="px-5 py-3 font-semibold">Plan</th>
                 <th className="px-5 py-3 font-semibold">Subscription</th>
                 <th className="px-5 py-3 font-semibold">Created</th>
+                <th className="px-5 py-3 font-semibold">Controls</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -132,15 +201,19 @@ export default async function PlatformAdminPage() {
                 const plan = subscription?.plan_id
                   ? planById.get(subscription.plan_id)
                   : null;
+                const lifecycleStatus = account.lifecycle_status ?? "active";
+                const subscriptionStatus = subscription?.status ?? "active";
 
                 return (
-                  <tr key={account.id} className="hover:bg-muted/25">
+                  <tr key={account.id} className="align-top hover:bg-muted/25">
                     <td className="px-5 py-4">
                       <div className="font-medium text-foreground">{account.name}</div>
-                      <div className="mt-1 font-mono text-[10px] text-muted-foreground">{account.id}</div>
+                      <div className="mt-1 font-mono text-[10px] text-muted-foreground">
+                        {account.id}
+                      </div>
                     </td>
                     <td className="px-5 py-4">
-                      <StatusBadge value={account.lifecycle_status ?? "active"} />
+                      <StatusBadge value={lifecycleStatus} />
                     </td>
                     <td className="px-5 py-4 text-muted-foreground">
                       {plan?.name ?? "Unassigned"}
@@ -157,12 +230,26 @@ export default async function PlatformAdminPage() {
                           }).format(new Date(account.created_at))
                         : "—"}
                     </td>
+                    <td className="px-5 py-4">
+                      {canManageBilling ? (
+                        <AccountAdminControls
+                          accountId={account.id}
+                          lifecycleStatus={lifecycleStatus}
+                          planId={subscription?.plan_id ?? null}
+                          subscriptionStatus={subscriptionStatus}
+                          plans={planOptions}
+                          canChangeLifecycle={canChangeLifecycle}
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Read only</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
               {(accounts ?? []).length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     No tenant accounts found.
                   </td>
                 </tr>
@@ -201,7 +288,7 @@ function MetricCard({
 
 function StatusBadge({ value }: { value: string }) {
   const normalized = value.toLowerCase();
-  const positive = ["active", "trial", "trialing"].includes(normalized);
+  const positive = ["active", "trial", "trialing", "public"].includes(normalized);
   const warning = ["past_due", "paused"].includes(normalized);
 
   return (
