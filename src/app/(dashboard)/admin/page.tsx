@@ -47,12 +47,13 @@ export default async function PlatformAdminPage() {
     });
   }
 
-  const planById = new Map((plans ?? []).map((plan) => [plan.id, plan]));
+  const planById = new Map(
+    (plans ?? []).map((plan) => [plan.id, plan] as const),
+  );
   const subscriptionByAccount = new Map(
-    (subscriptions ?? []).map((subscription) => [
-      subscription.account_id,
-      subscription,
-    ]),
+    (subscriptions ?? []).map(
+      (subscription) => [subscription.account_id, subscription] as const,
+    ),
   );
 
   return (
