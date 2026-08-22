@@ -10,23 +10,29 @@ import { latestUserMessage } from '@/lib/ai/query'
 import { logAiUsage } from '@/lib/ai/usage'
 import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { AiError } from '@/lib/ai/types'
+import {
+  requireAccountService,
+  requireFeature,
+  requireUsageAvailable,
+} from '@/lib/billing/entitlements'
+import { SBYT_FEATURES, SBYT_METRICS } from '@/lib/billing/catalog'
+import { incrementUsageBestEffort } from '@/lib/billing/metering'
 
-/**
- * POST /api/ai/draft  (agent+)
- *
- * Body: { conversation_id }
- * Returns: { draft } — a suggested reply for the agent to edit + send.
- *
- * Uses the account's configured provider/key (BYO). Read-only: it never
- * sends or stores anything, just hands text back to the composer.
- */
 export async function POST(request: Request) {
   try {
     const { supabase, accountId, userId } = await requireRole('agent')
 
+    const entitlements = await requireAccountService(supabase, accountId)
+    requireFeature(entitlements, SBYT_FEATURES.aiAssistant)
+    await requireUsageAvailable(
+      supabase,
+      entitlements,
+      SBYT_METRICS.aiRequests,
+      1,
+    )
+
     const userLimit = checkRateLimit(`ai-draft:${userId}`, RATE_LIMITS.aiDraft)
     if (!userLimit.success) return rateLimitResponse(userLimit)
-    // Also cap the whole team's draws on the shared BYO provider key.
     const accountLimit = checkRateLimit(
       `ai-draft-acct:${accountId}`,
       RATE_LIMITS.aiDraftAccount,
@@ -43,8 +49,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // RLS scopes the SSR client to the caller's account, so a missing
-    // row means "not yours / not found" either way.
     const { data: conversation, error: convErr } = await supabase
       .from('conversations')
       .select('id')
@@ -59,7 +63,6 @@ export async function POST(request: Request) {
     }
 
     const config = await loadAiConfig(supabase, accountId).catch((err) => {
-      // Decrypt failure — surface distinctly from "not configured".
       console.error('[ai/draft] loadAiConfig error:', err)
       throw new AiError('Stored API key could not be decrypted.', {
         code: 'key_decrypt_failed',
@@ -77,8 +80,6 @@ export async function POST(request: Request) {
     }
 
     const messages = await buildConversationContext(supabase, conversationId)
-    // Nothing to draft from — a brand-new thread with no customer text
-    // would otherwise produce a nonsensical reply-to-nothing.
     if (messages.length === 0) {
       return NextResponse.json(
         {
@@ -89,8 +90,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Ground the draft in the account's knowledge base (best-effort —
-    // returns [] when there's no KB or retrieval fails).
     const knowledge = await retrieveKnowledge(
       supabase,
       accountId,
@@ -106,13 +105,6 @@ export async function POST(request: Request) {
 
     const { text, usage } = await generateReply({ config, systemPrompt, messages })
 
-    // Record spend on the account's BYO key. Best-effort + via the
-    // service role (the log has no `authenticated` INSERT policy). This
-    // must not fail or delay the draft the agent is waiting on, so:
-    //  - the whole thing is wrapped (constructing the admin client throws
-    //    if the service-role key is unset — that must not 500 the draft);
-    //  - it's fire-and-forget (`void`), not awaited, so the response
-    //    isn't held for a DB round-trip.
     try {
       void logAiUsage(supabaseAdmin(), {
         accountId,
@@ -125,6 +117,8 @@ export async function POST(request: Request) {
     } catch (logErr) {
       console.error('[ai/draft] usage log skipped:', logErr)
     }
+
+    incrementUsageBestEffort(accountId, SBYT_METRICS.aiRequests, 1)
 
     return NextResponse.json({ draft: text })
   } catch (err) {
