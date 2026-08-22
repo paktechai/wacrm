@@ -11,6 +11,7 @@ import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
 import {
   Bell,
   Bot,
+  CreditCard,
   Crown,
   GitBranch,
   LayoutDashboard,
@@ -86,7 +87,15 @@ const navItems: NavItem[] = [
   { href: "/agents", labelKey: "aiAgents", icon: Bot },
 ];
 
-const bottomNavItems = [
+type BottomNavItem = {
+  href: string;
+  icon: typeof LayoutDashboard;
+  labelKey?: string;
+  label?: string;
+};
+
+const bottomNavItems: BottomNavItem[] = [
+  { href: "/billing", label: "Plan & usage", icon: CreditCard },
   { href: "/settings", labelKey: "settings", icon: Settings },
 ];
 
@@ -252,7 +261,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     )}
                   >
                     <item.icon className="h-4 w-4" />
-                    {t(item.labelKey as string)}
+                    {item.label ?? (item.labelKey ? t(item.labelKey) : "")}
                   </Link>
                 </li>
               );
