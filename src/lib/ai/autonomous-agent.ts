@@ -55,19 +55,28 @@ function safeDate(raw: unknown): string | null {
   return value.toISOString()
 }
 
+/**
+ * Resolve the configured agent id when available. If an older AI config has no
+ * default_agent_id (for example an agent was created before provider setup),
+ * fall back to the profile marked is_default. This keeps the UI's "Make default"
+ * state authoritative instead of silently dropping back to legacy auto-reply.
+ */
 async function loadProfile(
   db: SupabaseClient,
   accountId: string,
   agentId: string | null | undefined,
 ): Promise<AgentProfile | null> {
-  if (!agentId) return null
-  const { data, error } = await db
+  let query = db
     .from('ai_agent_profiles')
     .select('id, name, agent_type, system_prompt, tool_policy')
-    .eq('id', agentId)
     .eq('account_id', accountId)
     .eq('is_active', true)
-    .maybeSingle()
+
+  query = agentId
+    ? query.eq('id', agentId)
+    : query.eq('is_default', true)
+
+  const { data, error } = await query.maybeSingle()
 
   if (error) {
     console.error('[autonomous-agent] profile lookup failed:', error)
