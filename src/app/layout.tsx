@@ -6,6 +6,7 @@ import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { ThemedToaster } from "@/components/themed-toaster";
+import { PwaRegister } from "@/components/pwa-register";
 import {
   DEFAULT_MODE,
   DEFAULT_THEME,
@@ -28,12 +29,19 @@ export const metadata: Metadata = {
   },
   description:
     "SBYT CRM is an AI-powered WhatsApp customer engagement, CRM, marketing, and automation workspace by Sajid Byte Tech Solutions.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "SBYT CRM",
+    statusBarStyle: "black-translucent",
+  },
   robots: {
     index: false,
     follow: false,
   },
   icons: {
     icon: [{ url: "/icon" }],
+    apple: [{ url: "/sbyt-pwa-icon.svg" }],
   },
   formatDetection: {
     email: false,
@@ -114,6 +122,7 @@ export default async function RootLayout({
           <ThemeProvider>
             {children}
             <ThemedToaster />
+            <PwaRegister />
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>
