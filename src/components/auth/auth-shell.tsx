@@ -21,7 +21,7 @@ export function AuthShell({ children }: AuthShellProps) {
         <section className="relative hidden overflow-hidden border-r border-border/70 bg-card/30 p-10 lg:flex lg:flex-col xl:p-14">
           <div
             aria-hidden
-            className="absolute inset-0 opacity-25 [background-image:linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] [background-size:42px_42px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"
+            className="absolute inset-0 opacity-25 [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [background-size:42px_42px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"
           />
 
           <div className="relative flex items-center gap-3">
