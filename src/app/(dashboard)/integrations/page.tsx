@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { CheckCircle2, Copy, Globe2, MessageCircle, PlugZap, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -65,8 +65,6 @@ export default function IntegrationsPage() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
-
-  const registered = useMemo(() => new Set(integrations.map((item) => item.provider)), [integrations]);
 
   async function registerIntegration(provider: string, name: string) {
     const response = await fetch("/api/integrations", {
