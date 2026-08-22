@@ -19,10 +19,10 @@ export function EmbeddedSignupReadiness() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!canEditSettings) {
-      setLoading(false);
-      return;
-    }
+    // Non-admin members never render this card, so there is no loading state
+    // to settle for them. Avoiding a synchronous setState here also keeps the
+    // effect limited to its actual job: synchronizing with the status endpoint.
+    if (!canEditSettings) return;
 
     let cancelled = false;
     void fetch("/api/whatsapp/embedded-signup/status", { cache: "no-store" })
