@@ -42,13 +42,14 @@ export function ConversationIntelligenceBar({
   }, [conv]);
 
   if (!conv) return null;
+  const conversationId = conv.id;
 
   async function patch(body: Record<string, unknown>, optimistic: Patch) {
     if (saving) return;
     setSaving(true);
     onChanged(optimistic);
     try {
-      const response = await fetch(`/api/inbox/conversations/${conv.id}/ops`, {
+      const response = await fetch(`/api/inbox/conversations/${conversationId}/ops`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
