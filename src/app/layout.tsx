@@ -21,11 +21,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  applicationName: "SBYT CRM",
   title: {
-    default: "wacrm",
-    template: "%s — wacrm",
+    default: "SBYT CRM",
+    template: "%s — SBYT CRM",
   },
-  description: "Self-hostable CRM template for WhatsApp.",
+  description:
+    "SBYT CRM is an AI-powered WhatsApp customer engagement, CRM, marketing, and automation workspace by Sajid Byte Tech Solutions.",
   robots: {
     index: false,
     follow: false,
@@ -41,7 +43,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#020617",
+  themeColor: "#07090d",
   colorScheme: "dark light",
 };
 
