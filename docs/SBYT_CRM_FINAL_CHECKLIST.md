@@ -2,9 +2,11 @@
 
 Last verified branch: `feat/sbyt-crm-finalization`
 
-Verification baseline: `dd0943b7a46b0c57a4e8488659729758d36dace8`
+Current live verification head: `76567c05ce03bc0f692e7846cc772c149b83c360`
 
-Legend: ✅ verified/complete · 🟡 external launch dependency
+Original full verification baseline: `dd0943b7a46b0c57a4e8488659729758d36dace8`
+
+Legend: ✅ verified/complete · 🟡 external launch dependency · ⏸ deferred by current plan/credential state
 
 ## Product and SaaS foundation
 
@@ -62,15 +64,20 @@ Legend: ✅ verified/complete · 🟡 external launch dependency
 - ✅ Service-only audit/worker tables intentionally do not expose authenticated write policies
 - ✅ npm dependency audit in CI reported 0 vulnerabilities
 - ✅ Final Supabase security adviser review completed
+- ✅ Minimum password length hardened to 8 characters in live Supabase Auth settings
+- ✅ Strong password requirements enabled in live Supabase Auth settings
+- ⏸ Supabase leaked-password protection is unavailable on the current Free plan; enable immediately when moving to Pro/public customer launch
 
-Known adviser items intentionally retained or scheduled for launch hardening:
+Known adviser / scanner items intentionally retained or scheduled for launch hardening:
 
 - `automation_pending_executions` and `platform_audit_log` use RLS without authenticated policies by design; they are service/server-only paths.
 - Existing invitation, membership, presence and account-management SECURITY DEFINER RPCs remain callable only where required by current application flows and their internal authorization checks. They must not be blindly revoked merely to silence the adviser.
 - `vector` remains installed in the public schema for the current pgvector knowledge-base implementation.
-- Supabase leaked-password protection is currently disabled and should be enabled before public customer launch.
+- Hostinger currently reports `brace-expansion@1.1.18` as a high vulnerability under CVE-2026-14257. The repository lockfile already resolves the legacy 1.x dev-only copy to `1.1.18` and newer nested copies to `5.0.9`; do not force an incompatible major upgrade merely to silence the scanner. Re-scan after Hostinger updates its advisory data or after future dependency refreshes.
 
 ## Automated verification result
+
+Original full verification baseline:
 
 - ✅ `npm ci`
 - ✅ ESLint completed with no errors
@@ -84,16 +91,30 @@ GitHub Actions verification:
 
 - CI run `32572759799` — success
 - Migration run `32572759802` — success
+- CI run `32632094346` on live callback-fix head `76567c05ce03bc0f692e7846cc772c149b83c360` — success
+- Migration run `32632094347` on live callback-fix head `76567c05ce03bc0f692e7846cc772c149b83c360` — success
 
-## External launch dependencies
+## Live domain and authentication verification
+
+- ✅ `crm.sbyt.app` deployed on Hostinger from `feat/sbyt-crm-finalization`
+- ✅ HTTPS/live login page loads correctly
+- ✅ Supabase Auth Site URL / redirect configuration migrated to `crm.sbyt.app`
+- ✅ New-user signup on live domain
+- ✅ Email confirmation on live domain
+- ✅ Login and authenticated dashboard load
+- ✅ Logout and re-login
+- ✅ Password-recovery email delivery
+- ✅ Password-recovery callback route implemented
+- ✅ Hostinger reverse-proxy callback-origin issue fixed so password recovery returns to `https://crm.sbyt.app/reset-password` instead of `0.0.0.0:3000`
+- ✅ End-to-end password reset verified successfully on live domain
+- 🟡 Team invitation callback smoke test still pending
+
+## Remaining external launch dependencies
 
 These do not block internal CRM code verification, but they must be completed before public Meta-connected production launch:
 
-- 🟡 `sbyt.app` / application subdomains fully propagated with HTTPS/SSL
-- 🟡 Final `NEXT_PUBLIC_SITE_URL` and production domain environment configuration
-- 🟡 Supabase Auth Site URL and allowed redirect URLs migrated to final SBYT origins
-- 🟡 Live login, signup, password reset and invitation callback smoke tests on the SBYT domains
-- 🟡 Meta Tech Provider / business app setup
+- 🟡 Team invitation callback smoke test on the SBYT domain
+- 🟡 Meta Tech Provider / new SBYT business app setup
 - 🟡 Meta Embedded Signup App ID/configuration ID and App Review permissions
 - 🟡 Live Embedded Signup: Meta login → business/WABA → phone number → webhook subscription → registration
 - 🟡 Instagram and Messenger activation after Meta permissions/credentials
@@ -102,11 +123,11 @@ These do not block internal CRM code verification, but they must be completed be
 
 ## Pre-production security actions
 
-- 🟡 Enable Supabase leaked-password protection before public customer signup
+- ⏸ Upgrade Supabase to Pro and enable leaked-password protection before public customer signup
 - 🟡 Privately rotate/regenerate any encryption secret that was ever exposed outside the deployment secret store before customer data is onboarded
 - 🟡 Verify production service-role, Meta and WhatsApp secrets exist only in server-side environment variables
 - 🟡 Confirm production backups/monitoring and retention policy values before customer launch
 
 ## Release decision
 
-The internal SBYT CRM branch is code-, test-, build-, migration- and RLS-verified for the features that do not require live Meta/domain credentials. Keep `main` unchanged until the final release/merge decision. Meta- and live-domain-dependent activation should be completed and smoke-tested after the SBYT domains and Meta Tech Provider account are ready.
+The internal SBYT CRM branch is code-, test-, build-, migration- and RLS-verified for the features that do not require live Meta credentials. The live SBYT CRM domain and core authentication flows (signup, confirmation, login, logout and password recovery/reset) are now smoke-tested successfully. Keep `main` unchanged until the final release/merge decision. Meta-dependent activation and the remaining invitation/security/operations checks should be completed before public customer launch.
