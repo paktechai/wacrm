@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+function getPublicOrigin(request: NextRequest) {
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+
+  if (configuredSiteUrl) {
+    try {
+      return new URL(configuredSiteUrl).origin;
+    } catch {
+      // Fall through to the request origin if the configured URL is invalid.
+    }
+  }
+
+  return request.nextUrl.origin;
+}
+
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+  const searchParams = request.nextUrl.searchParams;
+  const origin = getPublicOrigin(request);
   const code = searchParams.get("code");
   const requestedNext = searchParams.get("next");
   const next =
