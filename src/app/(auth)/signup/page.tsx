@@ -31,8 +31,8 @@ function SignupPageInner() {
   // When the user lands here from `/join/<token>` we carry the
   // invite token in the query so it survives the signup → email
   // verification → redirect round-trip. `emailRedirectTo` below
-  // points back at /join/<token> so the user lands on the redeem
-  // step after verifying instead of being dropped on /dashboard.
+  // points at /login?invite=<token> so the verified user sees sign-in
+  // first, then returns to the join page to accept the invitation.
   const inviteToken = searchParams.get("invite");
 
   const [fullName, setFullName] = useState("");
@@ -61,11 +61,12 @@ function SignupPageInner() {
     setLoading(true);
 
     // If we have an invite token, point Supabase's verification
-    // email back at the join page so the user can accept after
-    // verifying. Without a token, Supabase uses its default
-    // redirect (the app root).
+    // email directly at the sign-in page. This prevents verified users
+    // from being sent back to account creation, while preserving the
+    // invite token for the existing sign-in → join flow. Without a
+    // token, Supabase uses its default redirect (the app root).
     const emailRedirectTo = inviteToken
-      ? `${window.location.origin}/join/${encodeURIComponent(inviteToken)}`
+      ? `${window.location.origin}/login?invite=${encodeURIComponent(inviteToken)}`
       : undefined;
 
     const { error } = await supabase.auth.signUp({
