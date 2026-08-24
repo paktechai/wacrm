@@ -55,7 +55,7 @@ function SignupPageInner() {
     setLoading(true);
 
     const emailRedirectTo = inviteToken
-      ? `${window.location.origin}/join/${encodeURIComponent(inviteToken)}`
+      ? `${window.location.origin}/login?invite=${encodeURIComponent(inviteToken)}`
       : undefined;
 
     const { error } = await supabase.auth.signUp({
