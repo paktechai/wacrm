@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   ACCOUNT_ROLES,
+  ADMIN_API_ROUTE_PREFIXES,
+  ADMIN_WORKSPACE_ROUTE_PREFIXES,
   type AccountRole,
+  canAccessWorkspaceRoute,
   canDeleteAccount,
   canEditSettings,
   canManageMembers,
@@ -10,6 +13,9 @@ import {
   canViewOnly,
   hasMinRole,
   isAccountRole,
+  isAdminApiRoute,
+  isAdminWorkspaceRoute,
+  isWorkspaceRoute,
   roleRank,
 } from "./roles";
 
@@ -126,5 +132,58 @@ describe("capability predicates", () => {
     expect(canTransferOwnership("admin")).toBe(false);
     expect(canTransferOwnership("agent")).toBe(false);
     expect(canTransferOwnership("viewer")).toBe(false);
+  });
+});
+
+describe("workspace route authorization", () => {
+  it.each(ADMIN_WORKSPACE_ROUTE_PREFIXES)(
+    "hides %s and nested management pages from agents and viewers",
+    (pathname) => {
+      expect(isAdminWorkspaceRoute(pathname)).toBe(true);
+      expect(isAdminWorkspaceRoute(`${pathname}/nested`)).toBe(true);
+      expect(canAccessWorkspaceRoute("agent", pathname)).toBe(false);
+      expect(canAccessWorkspaceRoute("viewer", pathname)).toBe(false);
+      expect(canAccessWorkspaceRoute("admin", pathname)).toBe(true);
+      expect(canAccessWorkspaceRoute("owner", pathname)).toBe(true);
+    },
+  );
+
+  it.each([
+    "/dashboard",
+    "/inbox",
+    "/smart-inbox",
+    "/notifications",
+    "/contacts",
+    "/crm",
+    "/pipelines",
+  ])("keeps the operational %s workspace available", (pathname) => {
+    expect(isWorkspaceRoute(pathname)).toBe(true);
+    expect(canAccessWorkspaceRoute("agent", pathname)).toBe(true);
+    expect(canAccessWorkspaceRoute("viewer", pathname)).toBe(true);
+  });
+
+  it("matches complete path segments instead of similarly prefixed pages", () => {
+    expect(isAdminWorkspaceRoute("/settings-public")).toBe(false);
+    expect(isWorkspaceRoute("/inbox-preview")).toBe(false);
+    expect(isAdminApiRoute("/api/integrations-public")).toBe(false);
+  });
+
+  it.each(ADMIN_API_ROUTE_PREFIXES)(
+    "protects the management API %s and nested endpoints",
+    (pathname) => {
+      expect(isAdminApiRoute(pathname)).toBe(true);
+      expect(isAdminApiRoute(`${pathname}/nested`)).toBe(true);
+    },
+  );
+
+  it("leaves externally authenticated scheduler endpoints untouched", () => {
+    expect(isAdminApiRoute("/api/automations/cron")).toBe(false);
+    expect(isAdminApiRoute("/api/flows/cron")).toBe(false);
+  });
+
+  it("keeps operational inbox AI endpoints available to agents", () => {
+    expect(isAdminApiRoute("/api/ai/config")).toBe(false);
+    expect(isAdminApiRoute("/api/ai/copilot")).toBe(false);
+    expect(isAdminApiRoute("/api/ai/draft")).toBe(false);
   });
 });

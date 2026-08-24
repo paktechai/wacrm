@@ -15,7 +15,7 @@ const PROVIDERS = new Set([
 
 export async function GET() {
   try {
-    const { supabase, accountId } = await requireRole("viewer");
+    const { supabase, accountId } = await requireRole("admin");
     const { data, error } = await supabase
       .from("integration_connections")
       .select("id, provider, name, status, settings, last_synced_at, last_error, created_at, updated_at")

@@ -35,7 +35,11 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import type { AccountRole } from "@/lib/auth/roles";
+import {
+  canAccessWorkspaceRoute,
+  isAdminWorkspaceRoute,
+  type AccountRole,
+} from "@/lib/auth/roles";
 import {
   Avatar,
   AvatarFallback,
@@ -122,9 +126,27 @@ interface SidebarProps {
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations("Sidebar");
   const pathname = usePathname();
-  const { profile, profileLoading, account, accountRole, signOut } = useAuth();
+  const {
+    profile,
+    profileLoading,
+    account,
+    accountRole,
+    canEditSettings,
+    signOut,
+  } = useAuth();
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
+
+  // Fail closed during profile hydration so privileged links never flash for
+  // an agent before the account role has been resolved.
+  const canSeeRoute = (href: string) =>
+    accountRole
+      ? canAccessWorkspaceRoute(accountRole, href)
+      : !isAdminWorkspaceRoute(href);
+  const visibleNavItems = navItems.filter((item) => canSeeRoute(item.href));
+  const visibleBottomNavItems = bottomNavItems.filter((item) =>
+    canSeeRoute(item.href),
+  );
 
   const showAccountStrip =
     !profileLoading &&
@@ -193,7 +215,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="flex flex-col gap-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
               const showUnreadDot = item.href === "/inbox" && totalUnread > 0 && !isActive;
               const showNotificationBadge = item.href === "/notifications" && unreadNotifications > 0;
@@ -213,21 +235,25 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             })}
           </ul>
 
-          <div className="my-4 border-t border-border" />
+          {visibleBottomNavItems.length > 0 ? (
+            <>
+              <div className="my-4 border-t border-border" />
 
-          <ul className="flex flex-col gap-1">
-            {bottomNavItems.map((item) => {
-              const isActive = pathname.startsWith(item.href);
-              return (
-                <li key={item.href}>
-                  <Link href={item.href} className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2", isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground") }>
-                    <item.icon className="h-4 w-4" />
-                    {item.label ?? (item.labelKey ? t(item.labelKey) : "")}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+              <ul className="flex flex-col gap-1">
+                {visibleBottomNavItems.map((item) => {
+                  const isActive = pathname.startsWith(item.href);
+                  return (
+                    <li key={item.href}>
+                      <Link href={item.href} className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2", isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground") }>
+                        <item.icon className="h-4 w-4" />
+                        {item.label ?? (item.labelKey ? t(item.labelKey) : "")}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          ) : null}
         </nav>
 
         <div className="shrink-0 border-t border-border p-3">
@@ -254,9 +280,13 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">{profile?.full_name ?? t("defaultUser")}</p><p className="truncate text-xs text-muted-foreground">{profile?.email ?? ""}</p></div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top" sideOffset={6} className="min-w-56 bg-popover text-popover-foreground ring-border">
-              <DropdownMenuItem render={<Link href="/settings?tab=profile" onClick={onClose} className="text-popover-foreground focus:bg-accent focus:text-accent-foreground" />}><User className="size-4" />{t("menuProfile")}</DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/settings?tab=whatsapp" onClick={onClose} className="text-popover-foreground focus:bg-accent focus:text-accent-foreground" />}><Settings className="size-4" />{t("menuSettings")}</DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-border" />
+              {canEditSettings ? (
+                <>
+                  <DropdownMenuItem render={<Link href="/settings?tab=profile" onClick={onClose} className="text-popover-foreground focus:bg-accent focus:text-accent-foreground" />}><User className="size-4" />{t("menuProfile")}</DropdownMenuItem>
+                  <DropdownMenuItem render={<Link href="/settings?tab=whatsapp" onClick={onClose} className="text-popover-foreground focus:bg-accent focus:text-accent-foreground" />}><Settings className="size-4" />{t("menuSettings")}</DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border" />
+                </>
+              ) : null}
               <DropdownMenuItem onClick={signOut} className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"><LogOut className="size-4" />{t("menuSignOut")}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

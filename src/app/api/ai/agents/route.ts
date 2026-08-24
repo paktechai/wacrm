@@ -7,7 +7,7 @@ const AGENT_TYPES = new Set(["sales", "support", "receptionist", "lead_qualifier
 
 export async function GET() {
   try {
-    const { supabase, accountId } = await requireRole("viewer");
+    const { supabase, accountId } = await requireRole("admin");
     const { data, error } = await supabase
       .from("ai_agent_profiles")
       .select("*")

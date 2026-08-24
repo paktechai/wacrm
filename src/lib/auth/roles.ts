@@ -25,6 +25,106 @@ export const ACCOUNT_ROLES: readonly AccountRole[] = [
   "owner",
 ] as const;
 
+/** Every authenticated application surface served by the dashboard layout. */
+export const WORKSPACE_ROUTE_PREFIXES = [
+  "/dashboard",
+  "/inbox",
+  "/smart-inbox",
+  "/notifications",
+  "/contacts",
+  "/crm",
+  "/pipelines",
+  "/marketing",
+  "/broadcasts",
+  "/automations",
+  "/flows",
+  "/agents",
+  "/commerce",
+  "/integrations",
+  "/enterprise",
+  "/onboarding",
+  "/billing",
+  "/settings",
+  "/admin",
+] as const;
+
+/** Workspace management surfaces are never available to agents/viewers. */
+export const ADMIN_WORKSPACE_ROUTE_PREFIXES = [
+  "/marketing",
+  "/broadcasts",
+  "/automations",
+  "/flows",
+  "/agents",
+  "/commerce",
+  "/integrations",
+  "/enterprise",
+  "/onboarding",
+  "/billing",
+  "/settings",
+  "/admin",
+] as const;
+
+/**
+ * Management APIs must be protected independently of their sidebar links.
+ * Operational AI configuration remains available because the inbox needs its
+ * safe, redacted status; mutation handlers still enforce admin themselves.
+ */
+export const ADMIN_API_ROUTE_PREFIXES = [
+  "/api/account/api-keys",
+  "/api/account/invitations",
+  "/api/ai/agents",
+  "/api/ai/knowledge",
+  "/api/ai/playground",
+  "/api/ai/test",
+  "/api/ai/usage",
+  "/api/automations",
+  "/api/commerce",
+  "/api/enterprise",
+  "/api/flows",
+  "/api/integrations",
+  "/api/marketing",
+  "/api/whatsapp/broadcast",
+  "/api/whatsapp/embedded-signup",
+  "/api/whatsapp/templates/submit",
+  "/api/whatsapp/templates/sync",
+] as const;
+
+/** Scheduler endpoints authenticate their own shared secret, not a user. */
+const EXTERNAL_JOB_ROUTE_PREFIXES = [
+  "/api/automations/cron",
+  "/api/flows/cron",
+] as const;
+
+function matchesRoutePrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+export function isWorkspaceRoute(pathname: string): boolean {
+  return WORKSPACE_ROUTE_PREFIXES.some((prefix) =>
+    matchesRoutePrefix(pathname, prefix),
+  );
+}
+
+export function isAdminWorkspaceRoute(pathname: string): boolean {
+  return ADMIN_WORKSPACE_ROUTE_PREFIXES.some((prefix) =>
+    matchesRoutePrefix(pathname, prefix),
+  );
+}
+
+export function isAdminApiRoute(pathname: string): boolean {
+  if (
+    EXTERNAL_JOB_ROUTE_PREFIXES.some((prefix) =>
+      matchesRoutePrefix(pathname, prefix),
+    )
+  ) {
+    return false;
+  }
+
+  return ADMIN_API_ROUTE_PREFIXES.some((prefix) =>
+    matchesRoutePrefix(pathname, prefix),
+  );
+}
+
 /**
  * Numeric rank of a role. Higher = more privileged. Mirrors the
  * CASE expression in `is_account_member` so JS/SQL stay aligned.
@@ -80,10 +180,18 @@ export function canEditSettings(role: AccountRole): boolean {
   return hasMinRole(role, "admin");
 }
 
+/** A single policy powers navigation, shortcuts, and server-side route guards. */
+export function canAccessWorkspaceRoute(
+  role: AccountRole,
+  pathname: string,
+): boolean {
+  return !isAdminWorkspaceRoute(pathname) || canEditSettings(role);
+}
+
 /**
  * Owner / admin / agent: write operational data — send messages,
- * create contacts, move deals, run broadcasts, edit automations.
- * Viewers are read-only.
+ * create contacts and move deals. Management modules have their own
+ * admin-only route/API gates. Viewers are read-only.
  */
 export function canSendMessages(role: AccountRole): boolean {
   return hasMinRole(role, "agent");

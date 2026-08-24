@@ -1,5 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import {
+  canEditSettings,
+  isAccountRole,
+  isAdminApiRoute,
+  isAdminWorkspaceRoute,
+  isWorkspaceRoute,
+} from '@/lib/auth/roles'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -13,7 +20,7 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -69,20 +76,54 @@ export async function middleware(request: NextRequest) {
     return withRefreshedCookies(NextResponse.redirect(url))
   }
 
-  // Protected pages - redirect to login if not authenticated
-  const protectedPaths = ['/dashboard', '/inbox', '/contacts', '/pipelines', '/broadcasts', '/automations', '/settings']
-  if (!user && protectedPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
+  const pathname = request.nextUrl.pathname
+  const restrictedPage = isAdminWorkspaceRoute(pathname)
+  const restrictedApi = isAdminApiRoute(pathname)
+
+  // Every dashboard route requires an authenticated session, including
+  // newer modules that were missing from the old hard-coded allowlist.
+  if (!user && isWorkspaceRoute(pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return withRefreshedCookies(NextResponse.redirect(url))
   }
 
-  // API routes that need auth (not webhooks)
-  if (!user && request.nextUrl.pathname.startsWith('/api/whatsapp/') &&
-      !request.nextUrl.pathname.includes('/webhook')) {
+  // API routes that need auth (not webhooks or independently secured cron).
+  if (!user && (restrictedApi ||
+      (pathname.startsWith('/api/whatsapp/') && !pathname.includes('/webhook')))) {
     return withRefreshedCookies(
       NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     )
+  }
+
+  if (user && (restrictedPage || restrictedApi)) {
+    // account_role lives on the server-owned profile row, not editable
+    // user_metadata. Resolve it only for management surfaces; ordinary
+    // inbox/contact navigation does not pay for this extra lookup.
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('account_role')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    const allowed = !error &&
+      isAccountRole(profile?.account_role) &&
+      canEditSettings(profile.account_role)
+
+    if (!allowed) {
+      if (restrictedApi) {
+        return withRefreshedCookies(
+          NextResponse.json({ error: 'Admin access is required' }, { status: 403 })
+        )
+      }
+
+      // Deny the page without signing out the user. Carry rotated Supabase
+      // cookies onto the redirect so a valid agent session stays alive.
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      url.search = ''
+      return withRefreshedCookies(NextResponse.redirect(url))
+    }
   }
 
   return supabaseResponse

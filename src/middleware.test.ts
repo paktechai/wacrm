@@ -9,6 +9,8 @@ import { NextRequest } from "next/server";
 //                      of the test is that these must survive onto whatever
 //                      response the middleware returns — including redirects.
 let mockUser: { id: string } | null = null;
+let mockAccountRole: string | null = "owner";
+let mockProfileError: { message: string } | null = null;
 let refreshedCookies: Array<{
   name: string;
   value: string;
@@ -32,6 +34,16 @@ vi.mock("@supabase/ssr", () => ({
         return { data: { user: mockUser } };
       },
     },
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({
+            data: mockAccountRole ? { account_role: mockAccountRole } : null,
+            error: mockProfileError,
+          }),
+        }),
+      }),
+    }),
   }),
 }));
 
@@ -42,6 +54,8 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
   mockUser = null;
+  mockAccountRole = "owner";
+  mockProfileError = null;
   refreshedCookies = [];
 });
 
@@ -109,5 +123,91 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     // No redirect — the normal NextResponse.next() already carries cookies.
     expect(res.headers.get("location")).toBeNull();
     expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
+  });
+});
+
+describe("middleware — account management permissions", () => {
+  it.each([
+    "/settings",
+    "/settings/profile",
+    "/billing",
+    "/integrations",
+    "/enterprise/security",
+    "/marketing",
+    "/broadcasts/new",
+    "/automations/new",
+    "/flows",
+    "/agents",
+    "/commerce",
+    "/onboarding",
+    "/admin",
+  ])("redirects an agent away from %s without ending the session", async (path) => {
+    mockUser = { id: "agent-1" };
+    mockAccountRole = "agent";
+    refreshedCookies = [ROTATED];
+
+    const res = await middleware(new NextRequest(`https://app.test${path}`));
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("https://app.test/dashboard");
+    expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
+  });
+
+  it.each(["owner", "admin"])(
+    "keeps management pages available to an %s",
+    async (role) => {
+      mockUser = { id: "manager-1" };
+      mockAccountRole = role;
+
+      const res = await middleware(new NextRequest("https://app.test/settings"));
+
+      expect(res.headers.get("location")).toBeNull();
+    },
+  );
+
+  it("returns 403 for an agent calling a management API", async () => {
+    mockUser = { id: "agent-1" };
+    mockAccountRole = "agent";
+    refreshedCookies = [ROTATED];
+
+    const res = await middleware(
+      new NextRequest("https://app.test/api/account/api-keys"),
+    );
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "Admin access is required" });
+    expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
+  });
+
+  it("returns 401 for an unauthenticated management API request", async () => {
+    const res = await middleware(
+      new NextRequest("https://app.test/api/integrations"),
+    );
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "Unauthorized" });
+  });
+
+  it("fails closed when the authoritative account role cannot be loaded", async () => {
+    mockUser = { id: "agent-1" };
+    mockAccountRole = "owner";
+    mockProfileError = { message: "profile unavailable" };
+
+    const res = await middleware(new NextRequest("https://app.test/billing"));
+
+    expect(res.headers.get("location")).toBe("https://app.test/dashboard");
+  });
+
+  it("protects dashboard modules omitted by the previous auth allowlist", async () => {
+    const res = await middleware(new NextRequest("https://app.test/smart-inbox"));
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("https://app.test/login");
+  });
+
+  it("does not intercept a cron endpoint's own authentication", async () => {
+    const res = await middleware(new NextRequest("https://app.test/api/flows/cron"));
+
+    expect(res.headers.get("location")).toBeNull();
   });
 });

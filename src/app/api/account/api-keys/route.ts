@@ -6,9 +6,9 @@
 //
 // These are the *dashboard* endpoints for managing keys, so they
 // authenticate the normal way (cookie session) and go through the
-// RLS client. Listing is open to any member (viewer+) — the roster
-// is not secret; the secret (the key itself) is never in it. Minting
-// is admin+ (a key hands out capabilities), enforced by both
+// RLS client. Both listing and minting are admin+ because API access
+// management must never be disclosed to operational agents. Minting
+// is additionally enforced by both
 // `requireRole('admin')` here and the `api_keys_insert` RLS policy.
 //
 // IMPORTANT: the plaintext key is returned exactly ONCE, in the POST
@@ -20,7 +20,6 @@
 import { NextResponse } from 'next/server';
 
 import {
-  getCurrentAccount,
   requireRole,
   toErrorResponse,
 } from '@/lib/auth/account';
@@ -44,9 +43,7 @@ const SAFE_COLUMNS =
 
 export async function GET() {
   try {
-    // Any member can view the roster (RLS allows it); we just need a
-    // resolved account context.
-    const ctx = await getCurrentAccount();
+    const ctx = await requireRole('admin');
 
     const { data, error } = await ctx.supabase
       .from('api_keys')

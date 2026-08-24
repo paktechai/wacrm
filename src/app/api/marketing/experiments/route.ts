@@ -6,7 +6,7 @@ const GOALS = new Set(["delivery_rate", "read_rate", "reply_rate", "conversion_r
 
 export async function GET() {
   try {
-    const { supabase, accountId } = await requireRole("viewer");
+    const { supabase, accountId } = await requireRole("admin");
     const { data, error } = await supabase
       .from("campaign_experiments")
       .select("*")
@@ -21,7 +21,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { supabase, accountId, userId } = await requireRole("agent");
+    const { supabase, accountId, userId } = await requireRole("admin");
     const body = await request.json();
     const name = typeof body?.name === "string" ? body.name.trim() : "";
     const key = typeof body?.experimentKey === "string" ? body.experimentKey.trim().toLowerCase() : "";
