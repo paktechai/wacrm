@@ -12,7 +12,7 @@
 //   ├──────────────────────┼───────────────┼─────────────────────────┤
 //   │ loading              │ —             │ spinner                  │
 //   │ ok:false (any reason)│ —             │ friendly error + signup  │
-//   │ ok:true              │ signed out    │ "Sign up" + "Sign in"    │
+//   │ ok:true              │ signed out    │ redirect to sign in       │
 //   │ ok:true              │ signed in     │ "Accept" button → redeem │
 //   └──────────────────────┴───────────────┴─────────────────────────┘
 //
@@ -24,7 +24,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   AlertTriangle,
@@ -92,6 +92,7 @@ const FAIL_COPY: Record<PeekFail['reason'], { title: string; body: string }> = {
 
 export default function JoinPage() {
   const params = useParams<{ token: string }>();
+  const router = useRouter();
   const token = params?.token;
 
   const [peek, setPeek] = useState<PeekResult | null>(null);
@@ -162,6 +163,17 @@ export default function JoinPage() {
       cancelled = true;
     };
   }, [token]);
+
+  // Existing teammates should land on sign in immediately. The login
+  // page preserves the invitation token and keeps account creation as
+  // a secondary option for people who genuinely need a new account.
+  useEffect(() => {
+    if (!token || peek === null || !peek.ok || authedUserId !== null) {
+      return;
+    }
+
+    router.replace(`/login?invite=${encodeURIComponent(token)}`);
+  }, [authedUserId, peek, router, token]);
 
   const handleAccept = useCallback(async () => {
     if (!token) return;
@@ -407,22 +419,24 @@ export default function JoinPage() {
     );
   }
 
-  // ----- Not authed: prompt to sign up or sign in -----
+  // ----- Not authed: send invited teammates directly to sign in -----
   return (
     <Card className="w-full max-w-md border-border bg-card">
       {inviteHeader}
-      <CardContent className="flex flex-col gap-2">
-        <Link href={`/signup?invite=${encodeURIComponent(token!)}`}>
-          <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-            Create account &amp; join
-          </Button>
-        </Link>
-        <Link href={`/login?invite=${encodeURIComponent(token!)}`}>
+      <CardContent className="flex flex-col items-center gap-3 py-6">
+        <Loader2 className="size-5 animate-spin text-primary" />
+        <p className="text-center text-sm text-muted-foreground">
+          Redirecting you to sign in…
+        </p>
+        <Link
+          href={`/login?invite=${encodeURIComponent(token!)}`}
+          className="w-full"
+        >
           <Button
             variant="outline"
             className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            I already have an account
+            Continue to sign in
           </Button>
         </Link>
       </CardContent>
