@@ -29,7 +29,10 @@ type DB = SupabaseClient
 
 // --- 1. Metric cards ---------------------------------------------------
 
-export async function loadMetrics(db: DB): Promise<MetricsBundle> {
+export async function loadMetrics(
+  db: DB,
+  includeCompanyFinancials = true,
+): Promise<MetricsBundle> {
   const todayStart = startOfLocalDay().toISOString()
   const yesterdayStart = daysAgoStart(1).toISOString()
 
@@ -61,7 +64,9 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
       .select('id', { count: 'exact', head: true })
       .gte('created_at', yesterdayStart)
       .lt('created_at', todayStart),
-    db.from('deals').select('value, status').eq('status', 'open'),
+    includeCompanyFinancials
+      ? db.from('deals').select('value, status').eq('status', 'open')
+      : Promise.resolve({ data: [] }),
     db
       .from('messages')
       .select('id', { count: 'exact', head: true })
@@ -265,7 +270,11 @@ export async function loadResponseTime(db: DB): Promise<ResponseTimeSummary> {
 
 // --- 5. Activity feed --------------------------------------------------
 
-export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> {
+export async function loadActivity(
+  db: DB,
+  limit = 20,
+  includeManagementActivity = true,
+): Promise<ActivityItem[]> {
   // Pull ~10 from each source (plenty of headroom after merge-sort),
   // then interleave by timestamp. The individual per-table limits
   // keep the payload small; the final limit is enforced after sort.
@@ -286,16 +295,20 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
       .select('id, title, updated_at, stage:pipeline_stages(name)')
       .order('updated_at', { ascending: false })
       .limit(10),
-    db
-      .from('broadcasts')
-      .select('id, name, status, total_recipients, created_at')
-      .order('created_at', { ascending: false })
-      .limit(5),
-    db
-      .from('automation_logs')
-      .select('id, trigger_event, status, created_at, automation:automations(name), contact:contacts(name, phone)')
-      .order('created_at', { ascending: false })
-      .limit(10),
+    includeManagementActivity
+      ? db
+          .from('broadcasts')
+          .select('id, name, status, total_recipients, created_at')
+          .order('created_at', { ascending: false })
+          .limit(5)
+      : Promise.resolve({ data: [] }),
+    includeManagementActivity
+      ? db
+          .from('automation_logs')
+          .select('id, trigger_event, status, created_at, automation:automations(name), contact:contacts(name, phone)')
+          .order('created_at', { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] }),
   ])
 
   const items: ActivityItem[] = []

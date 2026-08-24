@@ -197,6 +197,11 @@ export function canSendMessages(role: AccountRole): boolean {
   return hasMinRole(role, "agent");
 }
 
+/** Owner / admin: permanently remove customer records or conversation history. */
+export function canDeleteContacts(role: AccountRole): boolean {
+  return hasMinRole(role, "admin");
+}
+
 /**
  * Viewer: read-only across everything. Provided as a positive
  * predicate so UI gates read naturally (`if (canViewOnly(role))`

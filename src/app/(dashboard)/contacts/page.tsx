@@ -69,6 +69,7 @@ export default function ContactsPage() {
   const supabase = createClient();
   const canEdit = useCan('send-messages');
   const canEditSettings = useCan('edit-settings');
+  const canDelete = useCan('delete-contacts');
 
   const [contacts, setContacts] = useState<ContactWithTags[]>([]);
   const [loading, setLoading] = useState(true);
@@ -245,12 +246,13 @@ export default function ContactsPage() {
   }
 
   function confirmDelete(contact: Contact) {
+    if (!canDelete) return;
     setDeleteTarget(contact);
     setDeleteConfirmOpen(true);
   }
 
   async function handleDelete() {
-    if (!deleteTarget) return;
+    if (!canDelete || !deleteTarget) return;
     setDeleting(true);
 
     const { error } = await supabase
@@ -296,6 +298,7 @@ export default function ContactsPage() {
   }
 
   async function handleBulkDelete() {
+    if (!canDelete) return;
     const ids = [...selected];
     if (ids.length === 0) return;
     setDeleting(true);
@@ -360,16 +363,16 @@ export default function ContactsPage() {
               {t('customFieldsBtn')}
             </Button>
           )}
-          <GatedButton
-            variant="outline"
-            canAct={canEdit}
-            gateReason="add or import contacts"
-            onClick={() => setImportOpen(true)}
-            className="border-border text-muted-foreground hover:bg-muted"
-          >
-            <Upload className="size-4" />
-            {t('importBtn')}
-          </GatedButton>
+          {canEditSettings && (
+            <Button
+              variant="outline"
+              onClick={() => setImportOpen(true)}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              <Upload className="size-4" />
+              {t('importBtn')}
+            </Button>
+          )}
           <GatedButton
             canAct={canEdit}
             gateReason="add or import contacts"
@@ -499,7 +502,7 @@ export default function ContactsPage() {
       </div>
 
       {/* Bulk action bar */}
-      {selected.size > 0 && (
+      {canDelete && selected.size > 0 && (
         <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-4 py-2">
           <p className="text-sm text-foreground">
             {t('selectedCount', { count: selected.size })}
@@ -516,7 +519,7 @@ export default function ContactsPage() {
             <GatedButton
               variant="destructive"
               size="sm"
-              canAct={canEdit}
+              canAct={canDelete}
               gateReason="delete contacts"
               onClick={() => setBulkDeleteOpen(true)}
             >
@@ -532,15 +535,17 @@ export default function ContactsPage() {
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={allOnPageSelected}
-                  indeterminate={!allOnPageSelected && someOnPageSelected}
-                  onCheckedChange={toggleSelectAll}
-                  disabled={contacts.length === 0}
-                  aria-label="Select all contacts on this page"
-                />
-              </TableHead>
+              {canDelete && (
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allOnPageSelected}
+                    indeterminate={!allOnPageSelected && someOnPageSelected}
+                    onCheckedChange={toggleSelectAll}
+                    disabled={contacts.length === 0}
+                    aria-label="Select all contacts on this page"
+                  />
+                </TableHead>
+              )}
               <TableHead className="text-muted-foreground">{t('tableColumns.name')}</TableHead>
               <TableHead className="text-muted-foreground">{t('tableColumns.phone')}</TableHead>
               <TableHead className="text-muted-foreground hidden md:table-cell">{t('tableColumns.email')}</TableHead>
@@ -553,7 +558,7 @@ export default function ContactsPage() {
           <TableBody>
             {loading ? (
               <TableRow className="border-border">
-                <TableCell colSpan={8} className="text-center py-12">
+                <TableCell colSpan={canDelete ? 8 : 7} className="text-center py-12">
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="size-6 animate-spin text-primary" />
                     <p className="text-sm text-muted-foreground">{t('loading')}</p>
@@ -562,7 +567,7 @@ export default function ContactsPage() {
               </TableRow>
             ) : contacts.length === 0 ? (
               <TableRow className="border-border">
-                <TableCell colSpan={8} className="text-center py-12">
+                <TableCell colSpan={canDelete ? 8 : 7} className="text-center py-12">
                   <div className="flex flex-col items-center gap-2">
                     <Users className="size-8 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">
@@ -593,13 +598,15 @@ export default function ContactsPage() {
                   className="border-border hover:bg-muted/50 cursor-pointer"
                   onClick={() => openDetail(contact.id)}
                 >
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selected.has(contact.id)}
-                      onCheckedChange={() => toggleSelect(contact.id)}
-                      aria-label={`Select ${contact.name || contact.phone}`}
-                    />
-                  </TableCell>
+                  {canDelete && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selected.has(contact.id)}
+                        onCheckedChange={() => toggleSelect(contact.id)}
+                        aria-label={`Select ${contact.name || contact.phone}`}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="text-foreground font-medium">
                     {contact.name || <span className="text-muted-foreground italic">{t('unnamed')}</span>}
                   </TableCell>
@@ -672,17 +679,21 @@ export default function ContactsPage() {
                           <Pencil className="size-4" />
                           {t('editAction')}
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-border" />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            confirmDelete(contact);
-                          }}
-                        >
-                          <Trash2 className="size-4" />
-                          {t('deleteAction')}
-                        </DropdownMenuItem>
+                        {canDelete && (
+                          <>
+                            <DropdownMenuSeparator className="bg-border" />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmDelete(contact);
+                              }}
+                            >
+                              <Trash2 className="size-4" />
+                              {t('deleteAction')}
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -754,11 +765,13 @@ export default function ContactsPage() {
       />
 
       {/* Import Modal */}
-      <ImportModal
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        onImported={fetchContacts}
-      />
+      {canEditSettings && (
+        <ImportModal
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          onImported={fetchContacts}
+        />
+      )}
 
       {/* Custom Fields Manager (admin+) */}
       {canEditSettings && (

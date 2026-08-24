@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { useCan } from '@/hooks/use-can'
 import { formatCurrency } from '@/lib/currency'
 import {
   MessageSquare,
@@ -41,6 +42,7 @@ type RangeDays = 7 | 30 | 90
 export default function DashboardPage() {
   const t = useTranslations('Dashboard.page')
   const { defaultCurrency } = useAuth()
+  const canViewCompanyAnalytics = useCan('edit-settings')
   const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
 
@@ -70,7 +72,7 @@ export default function DashboardPage() {
     // Kick everything off in parallel. Each block has its own
     // setState + finally so a slow query doesn't hold up faster
     // sections — each widget shows its own skeleton independently.
-    void loadMetrics(db)
+    void loadMetrics(db, canViewCompanyAnalytics)
       .then((m) => setMetrics(m))
       .catch((err) => console.error('[dashboard] metrics failed:', err))
       .finally(() => setMetricsLoading(false))
@@ -80,10 +82,12 @@ export default function DashboardPage() {
       .catch((err) => console.error('[dashboard] series failed:', err))
       .finally(() => setSeriesLoading(false))
 
-    void loadPipelineDonut(db)
-      .then((p) => setPipeline(p))
-      .catch((err) => console.error('[dashboard] pipeline failed:', err))
-      .finally(() => setPipelineLoading(false))
+    if (canViewCompanyAnalytics) {
+      void loadPipelineDonut(db)
+        .then((p) => setPipeline(p))
+        .catch((err) => console.error('[dashboard] pipeline failed:', err))
+        .finally(() => setPipelineLoading(false))
+    }
 
     void loadResponseTime(db)
       .then((r) => setResponseTime(r))
@@ -93,11 +97,11 @@ export default function DashboardPage() {
     // Fetch up to 50 so the biggest page-size option in the feed
     // (50 rows) is already in memory — switching sizes then becomes
     // a pure client-side slice with no extra round trip.
-    void loadActivity(db, 50)
+    void loadActivity(db, 50, canViewCompanyAnalytics)
       .then((a) => setActivity(a))
       .catch((err) => console.error('[dashboard] activity failed:', err))
       .finally(() => setActivityLoading(false))
-  }, [])
+  }, [canViewCompanyAnalytics])
 
   useEffect(() => {
     loadAll()
@@ -132,9 +136,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Metric cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${canViewCompanyAnalytics ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
         {metricsLoading || !metrics ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+          Array.from({ length: canViewCompanyAnalytics ? 4 : 3 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
             <MetricCard
@@ -164,12 +168,14 @@ export default function DashboardPage() {
                 ),
               }}
             />
-            <MetricCard
-              title={t('openDealsValue')}
-              value={formatCurrency(metrics.openDealsValue, defaultCurrency)}
-              icon={DollarSign}
-              subtitle={t('openDeals', { count: metrics.openDealsCount })}
-            />
+            {canViewCompanyAnalytics && (
+              <MetricCard
+                title={t('openDealsValue')}
+                value={formatCurrency(metrics.openDealsValue, defaultCurrency)}
+                icon={DollarSign}
+                subtitle={t('openDeals', { count: metrics.openDealsCount })}
+              />
+            )}
             <MetricCard
               title={t('messagesSentToday')}
               value={metrics.messagesSentToday.current.toLocaleString()}
@@ -198,8 +204,8 @@ export default function DashboardPage() {
           stretched height so their rounded borders line up. Without
           this, the pipeline card rendered at its natural (shorter)
           height while the line chart drove the row height. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <div className="h-full lg:col-span-3">
+      <div className={`grid grid-cols-1 gap-4 ${canViewCompanyAnalytics ? 'lg:grid-cols-5' : ''}`}>
+        <div className={`h-full ${canViewCompanyAnalytics ? 'lg:col-span-3' : ''}`}>
           <ConversationsChart
             series={series}
             loading={seriesLoading}
@@ -207,13 +213,15 @@ export default function DashboardPage() {
             onRangeChange={handleRangeChange}
           />
         </div>
-        <div className="h-full lg:col-span-2">
-          <PipelineDonut
-            data={pipeline}
-            loading={pipelineLoading}
-            currency={defaultCurrency}
-          />
-        </div>
+        {canViewCompanyAnalytics && (
+          <div className="h-full lg:col-span-2">
+            <PipelineDonut
+              data={pipeline}
+              loading={pipelineLoading}
+              currency={defaultCurrency}
+            />
+          </div>
+        )}
       </div>
 
       {/* Response time */}

@@ -6,6 +6,7 @@ import {
   type AccountRole,
   canAccessWorkspaceRoute,
   canDeleteAccount,
+  canDeleteContacts,
   canEditSettings,
   canManageMembers,
   canSendMessages,
@@ -111,6 +112,13 @@ describe("capability predicates", () => {
     expect(canSendMessages("admin")).toBe(true);
     expect(canSendMessages("agent")).toBe(true);
     expect(canSendMessages("viewer")).toBe(false);
+  });
+
+  it("canDeleteContacts: admin+ only", () => {
+    expect(canDeleteContacts("owner")).toBe(true);
+    expect(canDeleteContacts("admin")).toBe(true);
+    expect(canDeleteContacts("agent")).toBe(false);
+    expect(canDeleteContacts("viewer")).toBe(false);
   });
 
   it("canViewOnly: viewer only", () => {
