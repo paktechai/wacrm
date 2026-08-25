@@ -41,6 +41,10 @@ import {
   getRecipientStatus,
 } from '@/lib/broadcast-status';
 import { useTranslations } from 'next-intl';
+import {
+  FunnelChart,
+  type FunnelStep,
+} from '@/components/broadcasts/funnel-chart';
 
 interface StatCardProps {
   label: string;
@@ -62,54 +66,6 @@ function StatCard({ label, value, total, icon, color }: StatCardProps) {
       </div>
       <p className="mt-3 text-2xl font-bold text-foreground">{value.toLocaleString()}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
-interface FunnelStep {
-  label: string;
-  value: number;
-  color: string;
-}
-
-/**
- * Pure-CSS funnel chart: decreasing-width rounded bars.
- * Width is relative to the largest step (typically Sent) so we
- * always render a full bar at the top and proportional tails.
- */
-function FunnelChart({ steps }: { steps: FunnelStep[] }) {
-  const max = Math.max(...steps.map((s) => s.value), 1);
-  return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <h3 className="mb-4 text-sm font-medium text-foreground">Funnel</h3>
-      <div className="space-y-2">
-        {steps.map((step) => {
-          const pctOfMax = Math.max(5, Math.round((step.value / max) * 100));
-          const pctOfSent =
-            steps[0].value > 0
-              ? Math.round((step.value / steps[0].value) * 100)
-              : 0;
-          return (
-            <div key={step.label} className="flex items-center gap-3">
-              <span className="w-20 shrink-0 text-xs text-muted-foreground">
-                {step.label}
-              </span>
-              <div className="relative h-7 flex-1 rounded-full bg-muted">
-                <div
-                  className={`h-7 rounded-full ${step.color} transition-[width] duration-500`}
-                  style={{ width: `${pctOfMax}%` }}
-                />
-                <span className="absolute inset-0 flex items-center px-3 text-xs font-medium text-foreground">
-                  {step.value.toLocaleString()}
-                  <span className="ml-2 text-muted-foreground/80">
-                    ({pctOfSent}%)
-                  </span>
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
