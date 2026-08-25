@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import {
   getSubscribedApps,
+  isMetaAppSubscribed,
   verifyPhoneNumber,
 } from '@/lib/whatsapp/meta-api'
 
@@ -88,16 +89,33 @@ export async function GET() {
     config_exists: boolean
     token_decryptable: boolean
     phone_metadata_ok: boolean
+    meta_app_id_configured: boolean
+    webhook_secret_configured: boolean
+    webhook_verify_token_configured: boolean
     waba_subscribed_to_app: boolean | null
     locally_marked_registered: boolean
   } = {
     config_exists: true,
     token_decryptable: true,
     phone_metadata_ok: false,
+    meta_app_id_configured: Boolean(process.env.META_APP_ID?.trim()),
+    webhook_secret_configured: Boolean(process.env.META_APP_SECRET?.trim()),
+    webhook_verify_token_configured: Boolean(config.verify_token),
     waba_subscribed_to_app: null,
     locally_marked_registered: config.registered_at != null,
   }
   const errors: string[] = []
+  const expectedAppId = process.env.META_APP_ID?.trim()
+
+  if (!checks.meta_app_id_configured) {
+    errors.push('META_APP_ID is missing from the server environment; the correct Meta app cannot be verified.')
+  }
+  if (!checks.webhook_secret_configured) {
+    errors.push('META_APP_SECRET is missing from the server environment; every incoming webhook is rejected.')
+  }
+  if (!checks.webhook_verify_token_configured) {
+    errors.push('Webhook verify token is missing. Add the same token in Meta webhook settings and save it here.')
+  }
 
   // 1. Phone metadata
   try {
@@ -119,14 +137,14 @@ export async function GET() {
         wabaId: config.waba_id,
         accessToken,
       })
-      // Meta returns the apps subscribed to this WABA. If the list
-      // is non-empty, OUR app is in there (the access_token we used
-      // belongs to our app — Meta wouldn't return data for an app
-      // the token can't see). Treat any entry as success.
-      checks.waba_subscribed_to_app = subs.length > 0
+      checks.waba_subscribed_to_app = expectedAppId
+        ? isMetaAppSubscribed(subs, expectedAppId)
+        : false
       if (!checks.waba_subscribed_to_app) {
         errors.push(
-          'WABA has no subscribed apps. Re-save the configuration to subscribe.',
+          subs.length > 0
+            ? 'This WABA is subscribed to another Meta app, not the SBYT app. Use an access token issued for the SBYT Meta app, then save again.'
+            : 'The SBYT Meta app is not subscribed to this WABA. Save the configuration again to subscribe.',
         )
       }
     } catch (err) {
@@ -142,6 +160,9 @@ export async function GET() {
 
   const live =
     checks.phone_metadata_ok &&
+    checks.meta_app_id_configured &&
+    checks.webhook_secret_configured &&
+    checks.webhook_verify_token_configured &&
     (checks.waba_subscribed_to_app ?? false) &&
     checks.locally_marked_registered
 

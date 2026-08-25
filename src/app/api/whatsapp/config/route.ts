@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import {
+  getSubscribedApps,
+  isMetaAppSubscribed,
   registerPhoneNumber,
   subscribeWabaToApp,
   verifyPhoneNumber,
@@ -187,10 +189,45 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { phone_number_id, waba_id, access_token, verify_token, pin } = body
 
-    if (!access_token || !phone_number_id) {
+    if (!phone_number_id) {
       return NextResponse.json(
-        { error: 'access_token and phone_number_id are required' },
+        { error: 'phone_number_id is required' },
         { status: 400 }
+      )
+    }
+
+    // Existing secrets never need to leave the server merely to re-save
+    // settings. Keeping both encrypted values also prevents an empty
+    // verification-token field from silently breaking Meta's callback.
+    const { data: existing, error: existingError } = await supabase
+      .from('whatsapp_config')
+      .select('id, registered_at, phone_number_id, access_token, verify_token')
+      .eq('account_id', accountId)
+      .maybeSingle()
+
+    if (existingError) {
+      return NextResponse.json(
+        { error: 'Failed to load the existing WhatsApp configuration' },
+        { status: 500 },
+      )
+    }
+
+    let resolvedAccessToken: string
+    if (typeof access_token === 'string' && access_token.trim()) {
+      resolvedAccessToken = access_token.trim()
+    } else if (existing?.access_token) {
+      try {
+        resolvedAccessToken = decrypt(existing.access_token)
+      } catch {
+        return NextResponse.json(
+          { error: 'The saved access token cannot be decrypted. Re-enter the access token to reconnect.' },
+          { status: 400 },
+        )
+      }
+    } else {
+      return NextResponse.json(
+        { error: 'access_token is required for the initial connection' },
+        { status: 400 },
       )
     }
 
@@ -240,7 +277,7 @@ export async function POST(request: Request) {
     try {
       phoneInfo = await verifyPhoneNumber({
         phoneNumberId: phone_number_id,
-        accessToken: access_token,
+        accessToken: resolvedAccessToken,
       })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown Meta API error'
@@ -255,8 +292,10 @@ export async function POST(request: Request) {
     let encryptedAccessToken: string
     let encryptedVerifyToken: string | null
     try {
-      encryptedAccessToken = encrypt(access_token)
-      encryptedVerifyToken = verify_token ? encrypt(verify_token) : null
+      encryptedAccessToken = encrypt(resolvedAccessToken)
+      encryptedVerifyToken = verify_token
+        ? encrypt(verify_token)
+        : existing?.verify_token ?? null
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown encryption error'
       console.error('Encryption failed:', message)
@@ -268,15 +307,6 @@ export async function POST(request: Request) {
         { status: 500 }
       )
     }
-
-    // Look up any pre-existing row for this account so we know whether
-    // this number is already registered with Meta — if so we can skip
-    // /register when the user didn't provide a PIN this time around.
-    const { data: existing } = await supabase
-      .from('whatsapp_config')
-      .select('id, registered_at, phone_number_id')
-      .eq('account_id', accountId)
-      .maybeSingle()
 
     const sameNumber =
       existing?.phone_number_id === phone_number_id &&
@@ -313,7 +343,7 @@ export async function POST(request: Request) {
         try {
           await registerPhoneNumber({
             phoneNumberId: phone_number_id,
-            accessToken: access_token,
+            accessToken: resolvedAccessToken,
             pin,
           })
           registeredAt = new Date().toISOString()
@@ -334,21 +364,43 @@ export async function POST(request: Request) {
     // Skipped only when there's no waba_id (legacy rows from before
     // we required it).
     let subscribedAppsAt: string | null = null
+    let subscriptionError: string | null = null
     if (waba_id) {
       try {
         await subscribeWabaToApp({
           wabaId: waba_id,
-          accessToken: access_token,
+          accessToken: resolvedAccessToken,
         })
-        subscribedAppsAt = new Date().toISOString()
+        const expectedAppId = process.env.META_APP_ID?.trim()
+        if (!expectedAppId) {
+          subscriptionError = 'META_APP_ID is missing from the server configuration.'
+        } else {
+          const subscribedApps = await getSubscribedApps({
+            wabaId: waba_id,
+            accessToken: resolvedAccessToken,
+          })
+          if (!isMetaAppSubscribed(subscribedApps, expectedAppId)) {
+            subscriptionError =
+              'The access token belongs to a different Meta app. Generate a token for the SBYT Meta app and reconnect.'
+          } else {
+            subscribedAppsAt = new Date().toISOString()
+          }
+        }
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
-        console.warn('WABA subscribed_apps failed (non-fatal):', message)
-        // Subscription failures are rare once the App has the right
-        // permissions; we don't block save on them — the diagnostic
-        // endpoint surfaces this state too.
+        subscriptionError = err instanceof Error ? err.message : String(err)
+        console.warn('WABA subscribed_apps failed:', subscriptionError)
       }
+    } else {
+      subscriptionError = 'A WhatsApp Business Account ID is required to receive incoming messages.'
     }
+
+    const webhookConfigurationError = !process.env.META_APP_SECRET?.trim()
+      ? 'META_APP_SECRET is missing from the server configuration; incoming webhooks cannot be verified.'
+      : !encryptedVerifyToken
+        ? 'Add a webhook verify token and configure the same token in Meta.'
+        : null
+    const connectionError =
+      registrationError ?? subscriptionError ?? webhookConfigurationError
 
     // Persist everything in one shot. If /register failed we still
     // store the credentials and the error so the UI can guide the
@@ -358,11 +410,11 @@ export async function POST(request: Request) {
       waba_id: waba_id || null,
       access_token: encryptedAccessToken,
       verify_token: encryptedVerifyToken,
-      status: registrationError ? 'disconnected' : 'connected',
-      connected_at: registrationError ? null : new Date().toISOString(),
+      status: connectionError ? 'disconnected' : 'connected',
+      connected_at: connectionError ? null : new Date().toISOString(),
       registered_at: registrationError ? null : registeredAt,
       subscribed_apps_at: subscribedAppsAt ?? null,
-      last_registration_error: registrationError,
+      last_registration_error: connectionError,
       updated_at: new Date().toISOString(),
     }
 
@@ -401,15 +453,16 @@ export async function POST(request: Request) {
       }
     }
 
-    if (registrationError) {
+    if (connectionError) {
       // Save succeeded but the number isn't actually live. Return
       // 200 with a structured error so the UI can show the specific
       // remediation step instead of a generic toast.
       return NextResponse.json({
         success: false,
         saved: true,
-        registered: false,
-        registration_error: registrationError,
+        registered: registrationError ? false : registeredAt != null,
+        registration_error: connectionError,
+        subscription_error: subscriptionError,
         phone_info: phoneInfo,
       })
     }
@@ -423,6 +476,7 @@ export async function POST(request: Request) {
       // Meta test number). The UI shows the "Not registered" banner
       // rather than claiming the number is fully live.
       registration_skipped: registrationSkipped,
+      subscribed: subscribedAppsAt != null,
       phone_info: phoneInfo,
     })
   } catch (error) {
