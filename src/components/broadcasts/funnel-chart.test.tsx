@@ -49,7 +49,7 @@ describe("broadcast funnel readability", () => {
     },
   );
 
-  it("renders every label, value and percentage with theme-safe foreground tokens", () => {
+  it("renders every label, value and percentage inside a theme-safe contrast chip", () => {
     const markup = renderToStaticMarkup(<FunnelChart steps={steps} />);
 
     for (const label of ["Sent", "Delivered", "Read", "Replied"]) {
@@ -61,8 +61,11 @@ describe("broadcast funnel readability", () => {
 
     expect(markup).toContain("bg-card");
     expect(markup.match(/text-foreground/g)?.length).toBeGreaterThanOrEqual(9);
+    expect(markup.match(/bg-background\/85/g)).toHaveLength(4);
+    expect(markup.match(/absolute inset-y-1 left-1/g)).toHaveLength(4);
+    expect(markup).toContain("ring-border/60");
     expect(markup).not.toContain("text-muted-foreground/80");
-    expect(markup).not.toContain("absolute inset-0");
+    expect(markup).not.toContain("sm:col-start-3");
   });
 
   it("preserves all existing bar colors, widths and zero-value visibility", () => {
@@ -78,15 +81,15 @@ describe("broadcast funnel readability", () => {
     expect(markup).toContain('aria-label="Replied: 0 (0%)"');
   });
 
-  it("keeps metrics readable above bars on mobile and inline on larger screens", () => {
+  it("keeps metrics inside full-width mobile bars and inline beside labels on larger screens", () => {
     const markup = renderToStaticMarkup(<FunnelChart steps={steps} />);
 
-    expect(markup).toContain("grid-cols-[minmax(0,1fr)_auto]");
-    expect(markup).toContain("row-start-2");
-    expect(markup).toContain("sm:grid-cols-[5rem_minmax(0,1fr)_auto]");
+    expect(markup).toContain("grid-cols-1");
+    expect(markup).toContain("sm:grid-cols-[5rem_minmax(0,1fr)]");
     expect(markup).toContain("sm:row-start-1");
     expect(markup).toContain("whitespace-nowrap");
     expect(markup).toContain("tabular-nums");
+    expect(markup).toContain("max-w-[calc(100%-0.5rem)]");
   });
 
   it("renders 0% for every step when no messages were sent", () => {
