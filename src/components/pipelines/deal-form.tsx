@@ -33,6 +33,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import {
+  createDealStageTransition,
+  createDealStatusTransition,
+} from "@/lib/pipeline-deals";
 
 interface DealFormProps {
   open: boolean;
@@ -158,13 +162,20 @@ export function DealForm({
     }
     setSaving(true);
 
+    const selectedStage = stages.find((stage) => stage.id === stageId);
+    if (!selectedStage) {
+      toast.error(t("toastRequired"));
+      setSaving(false);
+      return;
+    }
+
     const payload = {
       title: title.trim(),
       value: parseFloat(value) || 0,
       currency,
       contact_id: contactId,
       pipeline_id: pipelineId,
-      stage_id: stageId,
+      ...createDealStageTransition(selectedStage, deal?.status ?? "open"),
       assigned_to: assignedTo || null,
       notes: notes.trim() || null,
       expected_close_date: expectedCloseDate || null,
@@ -197,7 +208,7 @@ export function DealForm({
       }
       const { error } = await supabase
         .from("deals")
-        .insert({ ...payload, user_id: user.id, account_id: accountId, status: "open" });
+        .insert({ ...payload, user_id: user.id, account_id: accountId });
       if (error) {
         toast.error(t("toastFailedCreate"));
         setSaving(false);
@@ -216,7 +227,7 @@ export function DealForm({
     setStatusAction(status);
     const { error } = await supabase
       .from("deals")
-      .update({ status })
+      .update(createDealStatusTransition(status, stages, deal.stage_id))
       .eq("id", deal.id);
     setStatusAction(null);
     if (error) {
