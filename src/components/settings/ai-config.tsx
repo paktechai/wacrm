@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select';
 import { SettingsPanelHead } from './settings-panel-head';
 import { AiKnowledgeCard } from './ai-knowledge';
+import { AiConfigLoadState } from './ai-config-load-state';
 import { AI_PROVIDER_DEFAULT_MODEL } from '@/lib/ai/defaults';
 import type { AiProvider } from '@/lib/ai/types';
 import type { AccountMember } from '@/types';
@@ -54,6 +55,7 @@ export function AiConfig() {
   const t = useTranslations('Settings.aiConfig');
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -84,15 +86,20 @@ export function AiConfig() {
 
   const fetchConfig = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const res = await fetch('/api/ai/config');
-      const data = await res.json();
+      const res = await fetch('/api/ai/config', { cache: 'no-store' });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data.error ?? t('loadFailed'));
+        const message =
+          typeof data.error === 'string' ? data.error : t('loadFailed');
+        setLoadError(message);
+        toast.error(message);
         return;
       }
+
+      setConfigured(Boolean(data.configured));
       if (data.configured) {
-        setConfigured(true);
         setProvider(data.provider);
         setModel(data.model);
         setSystemPrompt(data.system_prompt ?? '');
@@ -106,13 +113,33 @@ export function AiConfig() {
         setHasStoredEmbeddingsKey(Boolean(data.has_embeddings_key));
         setEmbeddingsKey(data.has_embeddings_key ? MASKED_KEY : '');
         setEmbeddingsKeyEdited(false);
+      } else {
+        setProvider('openai');
+        setModel(AI_PROVIDER_DEFAULT_MODEL.openai);
+        setApiKey('');
+        setKeyEdited(false);
+        setShowKey(false);
+        setHasStoredKey(false);
+        setEmbeddingsKey('');
+        setEmbeddingsKeyEdited(false);
+        setHasStoredEmbeddingsKey(false);
+        setSystemPrompt('');
+        setIsActive(false);
+        setAutoReplyEnabled(false);
+        setMaxPerConversation(3);
+        setHandoffAgentId('');
       }
-    } catch {
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : t('loadNetworkError');
+      setLoadError(message);
       toast.error(t('loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!accountId || loadedAccountIdRef.current === accountId) return;
@@ -230,19 +257,24 @@ export function AiConfig() {
     }
   };
 
-  if (loading || profileLoading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('loadFailed')} {/* Re-using label or a global one, wait, loading is better. Let's use useTranslations from overview or just hardcode Loading... actually I should add loading to aiConfig */}
-        {/* Wait, I didn't add loading to aiConfig. I'll just use loading. */}
-      </div>
-    );
-  }
-
   const disabled = !canEdit || saving;
 
+  const loadStatus = loading || profileLoading
+    ? 'loading'
+    : loadError
+      ? 'error'
+      : 'success';
+
   return (
-    <div>
+    <AiConfigLoadState
+      status={loadStatus}
+      loadingLabel={t('loading')}
+      errorTitle={t('loadFailed')}
+      errorMessage={loadError}
+      retryLabel={t('retry')}
+      onRetry={() => void fetchConfig()}
+    >
+      <div>
       <SettingsPanelHead
         title={t('title')}
         description={t('description')}
@@ -521,6 +553,7 @@ export function AiConfig() {
           </Button>
         </div>
       </div>
-    </div>
+      </div>
+    </AiConfigLoadState>
   );
 }
