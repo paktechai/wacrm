@@ -5,6 +5,10 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import {
+  getPostLoginDestination,
+  navigateAfterLogin,
+} from "@/lib/auth/login-navigation";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,10 +57,10 @@ function LoginPageInner() {
       return;
     }
 
-    const destination = inviteToken
-      ? `/join/${encodeURIComponent(inviteToken)}`
-      : "/dashboard";
-    window.location.href = destination;
+    // A document navigation is deliberate here. Client-side router navigation
+    // can race the browser's newly committed Supabase cookies and can request
+    // an RSC payload before protected-route middleware sees the new session.
+    navigateAfterLogin(getPostLoginDestination(inviteToken));
   };
 
   return (
