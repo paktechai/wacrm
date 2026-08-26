@@ -1,17 +1,15 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Bot, CheckCircle2, Plus, ShieldCheck, Sparkles } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { Bot, CheckCircle2, Loader2, Plus, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-
-type AgentProfile = {
-  id: string;
-  name: string;
-  agent_type: "sales" | "support" | "receptionist" | "lead_qualifier" | "custom";
-  system_prompt: string;
-  is_active: boolean;
-  is_default: boolean;
-};
+import { Skeleton } from "@/components/dashboard/skeleton";
+import {
+  cacheCreatedAgent,
+  loadAgentProfiles,
+  type AgentProfile,
+} from "@/lib/ai/agent-profiles-client";
+import { runSingleAgentCreation } from "@/lib/ai/create-agent-flow";
 
 const PRESETS: Record<string, string> = {
   sales:
@@ -25,25 +23,35 @@ const PRESETS: Record<string, string> = {
   custom: "Follow the business instructions and approved knowledge. Be concise, safe and transparent when a human is needed.",
 };
 
-export function AgentProfiles() {
+export function AgentProfiles({
+  accountId,
+  onConfigurationMissing,
+}: {
+  accountId: string | null;
+  onConfigurationMissing: () => void;
+}) {
   const [agents, setAgents] = useState<AgentProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [type, setType] = useState("sales");
+  const creationLockRef = useRef({ current: false });
+  const loadSequenceRef = useRef(0);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async ({ force = false, silent = false } = {}) => {
+    if (!accountId) return;
+    const sequence = ++loadSequenceRef.current;
+    if (!silent) setLoading(true);
     try {
-      const response = await fetch("/api/ai/agents", { cache: "no-store" });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error || "Could not load AI agents");
-      setAgents(payload.agents ?? []);
+      const result = await loadAgentProfiles(accountId, { force });
+      if (sequence !== loadSequenceRef.current) return;
+      setAgents(result.agents);
+      if (!result.configured) onConfigurationMissing();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not load AI agents");
     } finally {
-      setLoading(false);
+      if (sequence === loadSequenceRef.current && !silent) setLoading(false);
     }
-  }, []);
+  }, [accountId, onConfigurationMissing]);
 
   useEffect(() => {
     void load();
@@ -51,38 +59,52 @@ export function AgentProfiles() {
 
   async function createAgent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (creating) return;
-    const form = new FormData(event.currentTarget);
-    setCreating(true);
+    if (!accountId) return;
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
-      const response = await fetch("/api/ai/agents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.get("name"),
-          agentType: type,
-          systemPrompt: form.get("systemPrompt"),
-          isDefault: form.get("defaultAgent") === "on",
-          goals: ["answer", "qualify", "route", "handoff"],
-          toolPolicy: {
-            crm_context: true,
-            knowledge_base: true,
-            create_task: true,
-            create_appointment: true,
-          },
-          handoffPolicy: { low_confidence: true, complaint: true, human_request: true },
-        }),
+      await runSingleAgentCreation({
+        lock: creationLockRef.current,
+        setPending: setCreating,
+        request: async () => {
+          const response = await fetch("/api/ai/agents", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: form.get("name"),
+              agentType: type,
+              systemPrompt: form.get("systemPrompt"),
+              isDefault: form.get("defaultAgent") === "on",
+              goals: ["answer", "qualify", "route", "handoff"],
+              toolPolicy: {
+                crm_context: true,
+                knowledge_base: true,
+                create_task: true,
+                create_appointment: true,
+              },
+              handoffPolicy: { low_confidence: true, complaint: true, human_request: true },
+            }),
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload?.error || "Could not create AI agent");
+          return payload.agent as AgentProfile;
+        },
+        onCreated: (agent) => {
+          setAgents((current) => {
+            const normalized = agent.is_default
+              ? current.map((item) => ({ ...item, is_default: false }))
+              : current;
+            return [...normalized, agent];
+          });
+          cacheCreatedAgent(accountId, agent);
+          formElement.reset();
+          setType("sales");
+          toast.success("AI agent created");
+        },
+        refresh: () => load({ force: true, silent: true }),
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error || "Could not create AI agent");
-      event.currentTarget.reset();
-      setType("sales");
-      await load();
-      toast.success("AI agent created");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not create AI agent");
-    } finally {
-      setCreating(false);
     }
   }
 
@@ -114,7 +136,13 @@ export function AgentProfiles() {
           </p>
         </div>
         <div className="divide-y divide-border">
-          {agents.map((agent) => (
+          {loading ? (
+            <div className="space-y-3 p-5" aria-label="Loading agent profiles">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          ) : agents.map((agent) => (
             <div key={agent.id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex gap-3">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Bot className="size-5" /></div>
@@ -145,7 +173,19 @@ export function AgentProfiles() {
           </select>
           <textarea name="systemPrompt" rows={7} defaultValue={PRESETS[type]} key={type} className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm leading-6 outline-none focus:border-primary" />
           <label className="flex items-center gap-2 text-xs text-muted-foreground"><input name="defaultAgent" type="checkbox" /> Make this the default autonomous agent</label>
-          <button disabled={creating} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"><Plus className="size-4" />{creating ? "Creating…" : "Create agent"}</button>
+          <button
+            type="submit"
+            disabled={creating || !accountId}
+            aria-busy={creating}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {creating ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Plus className="size-4" />
+            )}
+            {creating ? "Creating..." : "Create agent"}
+          </button>
         </form>
       </section>
     </div>
