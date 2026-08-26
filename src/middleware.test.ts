@@ -16,13 +16,19 @@ let refreshedCookies: Array<{
   value: string;
   options: Record<string, unknown>;
 }> = [];
+let refreshedHeaders: Record<string, string> = {};
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: (
     _url: string,
     _key: string,
     opts: {
-      cookies: { setAll: (c: typeof refreshedCookies) => void };
+      cookies: {
+        setAll: (
+          c: typeof refreshedCookies,
+          headers: Record<string, string>,
+        ) => void;
+      };
     },
   ) => ({
     auth: {
@@ -30,7 +36,9 @@ vi.mock("@supabase/ssr", () => ({
       // refreshed inside getUser(), which rotates the refresh token and
       // pushes the new cookies through setAll() before resolving.
       getUser: async () => {
-        if (refreshedCookies.length) opts.cookies.setAll(refreshedCookies);
+        if (refreshedCookies.length || Object.keys(refreshedHeaders).length) {
+          opts.cookies.setAll(refreshedCookies, refreshedHeaders);
+        }
         return { data: { user: mockUser } };
       },
     },
@@ -57,6 +65,7 @@ beforeEach(() => {
   mockAccountRole = "owner";
   mockProfileError = null;
   refreshedCookies = [];
+  refreshedHeaders = {};
 });
 
 afterEach(() => vi.clearAllMocks());
@@ -123,6 +132,68 @@ describe("middleware — refreshed auth cookies survive redirects", () => {
     // No redirect — the normal NextResponse.next() already carries cookies.
     expect(res.headers.get("location")).toBeNull();
     expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
+  });
+
+  it("preserves Supabase refresh headers on a redirect", async () => {
+    mockUser = { id: "user-1" };
+    refreshedCookies = [ROTATED];
+    refreshedHeaders = {
+      "Cache-Control": "private, no-cache, no-store, must-revalidate, max-age=0",
+      Expires: "0",
+      Pragma: "no-cache",
+    };
+
+    const res = await middleware(new NextRequest("https://app.test/login"));
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get("Cache-Control")).toContain("no-store");
+    expect(res.headers.get("Expires")).toBe("0");
+    expect(res.headers.get("Pragma")).toBe("no-cache");
+    expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
+  });
+
+  it("marks logged-out protected-route redirects private and RSC-aware", async () => {
+    const res = await middleware(
+      new NextRequest("https://app.test/dashboard", {
+        headers: { RSC: "1", "Next-Router-Prefetch": "1" },
+      }),
+    );
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get("Cache-Control")).toContain("no-store");
+    expect(res.headers.get("Vary")).toContain("RSC");
+    expect(res.headers.get("Vary")).toContain("Next-Router-Prefetch");
+  });
+
+  it("keeps consecutive authenticated dashboard loads on the dashboard", async () => {
+    mockUser = { id: "user-1" };
+
+    const hardRefresh = await middleware(
+      new NextRequest("https://app.test/dashboard"),
+    );
+    const rscRefresh = await middleware(
+      new NextRequest("https://app.test/dashboard?_rsc=refresh-test", {
+        headers: { RSC: "1", "Next-Router-State-Tree": '[""]' },
+      }),
+    );
+
+    for (const res of [hardRefresh, rscRefresh]) {
+      expect(res.headers.get("location")).toBeNull();
+      expect(res.headers.get("Cache-Control")).toContain("no-store");
+    }
+  });
+
+  it("redirects repeated authenticated login-page requests in one step", async () => {
+    mockUser = { id: "user-1" };
+
+    const first = await middleware(new NextRequest("https://app.test/login"));
+    const second = await middleware(new NextRequest("https://app.test/login"));
+
+    for (const res of [first, second]) {
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe("https://app.test/dashboard");
+      expect(res.headers.get("Cache-Control")).toContain("no-store");
+    }
   });
 });
 
