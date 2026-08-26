@@ -7,9 +7,17 @@ import {
   isAdminWorkspaceRoute,
   isWorkspaceRoute,
 } from '@/lib/auth/roles'
+import { applyDynamicResponseHeaders } from '@/lib/http/dynamic-response'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
+  const refreshedHeaders = new Headers()
+
+  const applyAuthHeaders = <T extends NextResponse>(response: T): T => {
+    refreshedHeaders.forEach((value, key) => response.headers.set(key, value))
+    applyDynamicResponseHeaders(response.headers)
+    return response
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,12 +27,16 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
+          Object.entries(headers).forEach(([key, value]) => {
+            refreshedHeaders.set(key, value)
+          })
+          applyAuthHeaders(supabaseResponse)
         },
       },
     }
@@ -41,12 +53,13 @@ export async function middleware(request: NextRequest) {
   // replays the old, now-consumed refresh token, the refresh fails, and
   // the session wedges — the user gets a broken reload after idling and
   // can only recover by manually clearing cookies (issue #288). Copy the
-  // refreshed cookies onto whatever response we hand back to fix that.
-  const withRefreshedCookies = <T extends NextResponse>(response: T): T => {
+  // refreshed cookies AND Supabase's anti-cache headers onto whatever response
+  // we hand back so neither the browser nor a CDN can replay stale auth state.
+  const withRefreshedAuth = <T extends NextResponse>(response: T): T => {
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       response.cookies.set(cookie)
     })
-    return response
+    return applyAuthHeaders(response)
   }
 
   // Auth pages - redirect to dashboard if already logged in.
@@ -73,7 +86,7 @@ export async function middleware(request: NextRequest) {
       url.pathname = '/dashboard'
       url.search = ''
     }
-    return withRefreshedCookies(NextResponse.redirect(url))
+    return withRefreshedAuth(NextResponse.redirect(url))
   }
 
   const pathname = request.nextUrl.pathname
@@ -85,13 +98,13 @@ export async function middleware(request: NextRequest) {
   if (!user && isWorkspaceRoute(pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    return withRefreshedCookies(NextResponse.redirect(url))
+    return withRefreshedAuth(NextResponse.redirect(url))
   }
 
   // API routes that need auth (not webhooks or independently secured cron).
   if (!user && (restrictedApi ||
       (pathname.startsWith('/api/whatsapp/') && !pathname.includes('/webhook')))) {
-    return withRefreshedCookies(
+    return withRefreshedAuth(
       NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     )
   }
@@ -112,7 +125,7 @@ export async function middleware(request: NextRequest) {
 
     if (!allowed) {
       if (restrictedApi) {
-        return withRefreshedCookies(
+        return withRefreshedAuth(
           NextResponse.json({ error: 'Admin access is required' }, { status: 403 })
         )
       }
@@ -122,11 +135,11 @@ export async function middleware(request: NextRequest) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       url.search = ''
-      return withRefreshedCookies(NextResponse.redirect(url))
+      return withRefreshedAuth(NextResponse.redirect(url))
     }
   }
 
-  return supabaseResponse
+  return applyAuthHeaders(supabaseResponse)
 }
 
 export const config = {
