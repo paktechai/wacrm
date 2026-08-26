@@ -676,17 +676,6 @@ async function processMessage(
         ? 'interactive' // template quick-reply tap (issue #478)
         : 'text'        // reaction, unknown → text fallback
 
-  // Determine whether this is the contact's very first inbound message
-  // BEFORE we insert, so the count is accurate. Covers the case where
-  // the contact row already exists (manual add / CSV import) but they've
-  // never messaged us before — which new_contact_created wouldn't catch.
-  const { count: priorCustomerMsgCount } = await supabaseAdmin()
-    .from('messages')
-    .select('id', { count: 'exact', head: true })
-    .eq('conversation_id', conversation.id)
-    .eq('sender_type', 'customer')
-  const isFirstInboundMessage = (priorCustomerMsgCount ?? 0) === 0
-
   // Idempotent insert. Meta retries webhook deliveries (a slow ack, a
   // transient 5xx), and each retry replays the exact same message.id. The
   // unique index on (conversation_id, message_id) added in migration 037
@@ -738,6 +727,30 @@ async function processMessage(
     )
     return
   }
+
+  // Atomically claim this CONTACT's first inbound message. A count taken
+  // before the insert was scoped to one conversation and was race-prone:
+  // a new conversation for the same contact, or two distinct messages
+  // arriving together, could both dispatch the welcome automation. The
+  // DB function updates a tenant-scoped nullable marker and returns true
+  // to exactly one caller. Fail closed if the claim cannot be checked so
+  // a transient DB problem never creates duplicate welcome sends.
+  const { data: isFirstInboundClaim, error: firstInboundClaimError } =
+    await supabaseAdmin().rpc('claim_contact_first_inbound_message', {
+      p_account_id: accountId,
+      p_contact_id: contactRecord.id,
+      p_received_at: new Date(parseInt(message.timestamp) * 1000).toISOString(),
+    })
+  if (firstInboundClaimError) {
+    console.error('[webhook] first inbound claim failed:', {
+      accountId,
+      contactId: contactRecord.id,
+      messageId: message.id,
+      error: firstInboundClaimError,
+    })
+  }
+  const isFirstInboundMessage =
+    !firstInboundClaimError && isFirstInboundClaim === true
 
   // Update conversation. The unread bump is done DB-side (migration 037's
   // bump_conversation_on_inbound) rather than as a read-modify-write of the
