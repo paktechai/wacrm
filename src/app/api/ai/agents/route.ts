@@ -6,25 +6,52 @@ import { writeTenantAudit } from "@/lib/audit/tenant";
 const AGENT_TYPES = new Set(["sales", "support", "receptionist", "lead_qualifier", "custom"]);
 
 export async function GET() {
+  const startedAt = performance.now();
   try {
     const { supabase, accountId } = await requireRole("admin");
-    const { data, error } = await supabase
-      .from("ai_agent_profiles")
-      .select("*")
-      .eq("account_id", accountId)
-      .order("is_default", { ascending: false })
-      .order("created_at", { ascending: true });
-    if (error) throw error;
-    return NextResponse.json({ agents: data ?? [] });
+    const authDoneAt = performance.now();
+    const [agentsResult, configResult] = await Promise.all([
+      supabase
+        .from("ai_agent_profiles")
+        .select("id, name, agent_type, system_prompt, is_active, is_default")
+        .eq("account_id", accountId)
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("ai_configs")
+        .select("id")
+        .eq("account_id", accountId)
+        .maybeSingle(),
+    ]);
+    if (agentsResult.error) throw agentsResult.error;
+    if (configResult.error) throw configResult.error;
+
+    const finishedAt = performance.now();
+    const response = NextResponse.json({
+      agents: agentsResult.data ?? [],
+      configured: Boolean(configResult.data),
+    });
+    response.headers.set(
+      "Server-Timing",
+      `auth;dur=${(authDoneAt - startedAt).toFixed(1)}, db;dur=${(finishedAt - authDoneAt).toFixed(1)}, total;dur=${(finishedAt - startedAt).toFixed(1)}`,
+    );
+    return response;
   } catch (error) {
     return toErrorResponse(error);
   }
 }
 
 export async function POST(request: Request) {
+  const startedAt = performance.now();
   try {
-    const { supabase, accountId, userId } = await requireRole("admin");
-    const body = await request.json();
+    // Body parsing is independent of authorization; overlap it with the auth
+    // round trip, while keeping every database write strictly after the role
+    // check has succeeded.
+    const [{ supabase, accountId, userId }, body] = await Promise.all([
+      requireRole("admin"),
+      request.json(),
+    ]);
+    const authDoneAt = performance.now();
     const name = typeof body?.name === "string" ? body.name.trim() : "";
     const agentType = AGENT_TYPES.has(body?.agentType) ? body.agentType : "custom";
     const systemPrompt = typeof body?.systemPrompt === "string" ? body.systemPrompt.trim() : "";
@@ -57,7 +84,7 @@ export async function POST(request: Request) {
         is_active: body?.isActive !== false,
         is_default: isDefault,
       })
-      .select("*")
+      .select("id, name, agent_type, system_prompt, is_active, is_default")
       .single();
     if (error) throw error;
 
@@ -77,7 +104,13 @@ export async function POST(request: Request) {
       metadata: { name: agent.name, agent_type: agent.agent_type },
     });
 
-    return NextResponse.json({ agent }, { status: 201 });
+    const finishedAt = performance.now();
+    const response = NextResponse.json({ agent }, { status: 201 });
+    response.headers.set(
+      "Server-Timing",
+      `auth;dur=${(authDoneAt - startedAt).toFixed(1)}, db;dur=${(finishedAt - authDoneAt).toFixed(1)}, total;dur=${(finishedAt - startedAt).toFixed(1)}`,
+    );
+    return response;
   } catch (error) {
     return toErrorResponse(error);
   }
