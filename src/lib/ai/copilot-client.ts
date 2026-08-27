@@ -16,6 +16,14 @@ export type CopilotRequestResult = {
 
 export type CopilotActionLock = { current: boolean };
 
+export function createTransformRequest(
+  action: 'rewrite' | 'translate',
+  input: string,
+  targetLanguage: string
+): CopilotRequestBody {
+  return { action, input, targetLanguage };
+}
+
 export function parseServerTiming(value: string): Record<string, number> {
   const timings: Record<string, number> = {};
   for (const item of value.split(',')) {

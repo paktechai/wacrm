@@ -11,6 +11,7 @@ import {
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import {
+  createTransformRequest,
   parseServerTiming,
   requestCopilot,
   runSingleCopilotAction,
@@ -123,7 +124,10 @@ export function CopilotWorkbench() {
 
   function transform(action: 'rewrite' | 'translate') {
     if (!text.trim()) return;
-    return execute(action, { action, input: text, targetLanguage });
+    return execute(
+      action,
+      createTransformRequest(action, text, targetLanguage)
+    );
   }
 
   const running = activeAction !== null;
@@ -237,7 +241,7 @@ export function CopilotWorkbench() {
             <button
               type="button"
               aria-busy={activeAction === 'translate'}
-              disabled={!text.trim() || running}
+              disabled={!text.trim() || !targetLanguage.trim() || running}
               onClick={() => void transform('translate')}
               className="border-border hover:bg-muted rounded-xl border px-3 py-2 text-sm disabled:opacity-50"
             >
@@ -245,7 +249,7 @@ export function CopilotWorkbench() {
             </button>
             <button
               aria-busy={activeAction === 'rewrite'}
-              disabled={!text.trim() || running}
+              disabled={!text.trim() || !targetLanguage.trim() || running}
               className="bg-primary text-primary-foreground rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-50"
             >
               {actionContent('rewrite')}

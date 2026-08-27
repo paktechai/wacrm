@@ -8,6 +8,7 @@ import {
 } from '@/lib/billing/entitlements';
 import { loadAiConfig } from '@/lib/ai/config';
 import { loadCopilotConversationContext } from '@/lib/ai/copilot-context';
+import { buildCopilotTransformPrompt } from '@/lib/ai/copilot-prompts';
 import { generateReply } from '@/lib/ai/generate';
 import { ServerTiming } from '@/lib/ai/server-timing';
 import { logAiUsage } from '@/lib/ai/usage';
@@ -123,14 +124,16 @@ export async function POST(request: Request) {
             { status: 400 }
           );
         }
-        systemPrompt = `You are SBYT CRM Translator. Translate faithfully into ${targetLanguage}. Preserve names, numbers, links and business meaning. Return only the translation.`;
+        systemPrompt = buildCopilotTransformPrompt('translate', targetLanguage);
         if (input) messages = userMessage(input);
         break;
       case 'rewrite':
+        if (!targetLanguage) {
+          return json({ error: 'targetLanguage is required' }, { status: 400 });
+        }
         if (!input)
           return json({ error: 'input is required' }, { status: 400 });
-        systemPrompt =
-          'You are SBYT CRM Copilot. Rewrite the supplied draft to be clear, concise, professional and natural for customer messaging. Preserve facts and intent. Return only the improved message.';
+        systemPrompt = buildCopilotTransformPrompt('rewrite', targetLanguage);
         messages = userMessage(input);
         break;
       case 'next_action':
@@ -268,7 +271,10 @@ export async function POST(request: Request) {
             user_id: userId,
             conversation_id: conversationId,
             action,
-            output_language: action === 'translate' ? targetLanguage : null,
+            output_language:
+              action === 'translate' || action === 'rewrite'
+                ? targetLanguage
+                : null,
             metadata: { persisted: Object.keys(updates).length > 0 },
           })
           .then(({ error }) => {

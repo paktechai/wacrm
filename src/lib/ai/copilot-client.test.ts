@@ -1,11 +1,31 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  createTransformRequest,
   parseServerTiming,
   requestCopilot,
   runSingleCopilotAction,
 } from './copilot-client';
 
 describe('Copilot client', () => {
+  it.each([
+    ['translate', 'Urdu'],
+    ['translate', 'French'],
+    ['rewrite', 'Urdu'],
+    ['rewrite', 'English'],
+    ['rewrite', 'Spanish'],
+  ] as const)(
+    'forwards the selected language for %s in %s',
+    (action, targetLanguage) => {
+      expect(
+        createTransformRequest(action, 'Original draft', targetLanguage)
+      ).toEqual({
+        action,
+        input: 'Original draft',
+        targetLanguage,
+      });
+    }
+  );
+
   it('prevents repeated action clicks while a slow request is pending', async () => {
     let resolveRequest!: (value: string) => void;
     const request = vi.fn(
