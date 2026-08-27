@@ -108,8 +108,8 @@ export function AiUsageCard() {
               <BarChart3 className="h-4 w-4 text-primary" /> Token usage
             </CardTitle>
             <CardDescription>
-              Tokens spent on your provider key by drafts and the auto-reply
-              bot. Counts only — no message content is stored here.
+              Tokens spent on your provider key by Playground, Copilot, drafts,
+              and auto-reply. Counts only — no message content is stored here.
             </CardDescription>
           </div>
           <Select
@@ -137,7 +137,7 @@ export function AiUsageCard() {
             <BarChart3 className="h-8 w-8 opacity-40" />
             <p>No AI usage in the last {data.window_days} days yet.</p>
             <p className="text-xs">
-              This fills in as the assistant drafts and auto-replies.
+              This fills in as Playground, Copilot, drafts, and auto-reply run.
             </p>
           </div>
         ) : (

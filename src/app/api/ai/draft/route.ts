@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { loadAiConfig } from '@/lib/ai/config'
@@ -16,7 +16,6 @@ import {
   requireUsageAvailable,
 } from '@/lib/billing/entitlements'
 import { SBYT_FEATURES, SBYT_METRICS } from '@/lib/billing/catalog'
-import { incrementUsageBestEffort } from '@/lib/billing/metering'
 
 export async function POST(request: Request) {
   try {
@@ -106,19 +105,21 @@ export async function POST(request: Request) {
     const { text, usage } = await generateReply({ config, systemPrompt, messages })
 
     try {
-      void logAiUsage(supabaseAdmin(), {
-        accountId,
-        conversationId,
-        mode: 'draft',
-        provider: config.provider,
-        model: config.model,
-        usage,
-      })
+      const admin = supabaseAdmin()
+      after(() =>
+        logAiUsage(admin, {
+          requestId: crypto.randomUUID(),
+          accountId,
+          conversationId,
+          mode: 'draft',
+          provider: config.provider,
+          model: config.model,
+          usage,
+        }),
+      )
     } catch (logErr) {
       console.error('[ai/draft] usage log skipped:', logErr)
     }
-
-    incrementUsageBestEffort(accountId, SBYT_METRICS.aiRequests, 1)
 
     return NextResponse.json({ draft: text })
   } catch (err) {

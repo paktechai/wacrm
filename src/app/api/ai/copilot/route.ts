@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
 import {
@@ -164,19 +164,17 @@ export async function POST(request: Request) {
 
     try {
       const admin = supabaseAdmin();
-      void logAiUsage(admin, {
-        accountId,
-        conversationId,
-        mode: 'draft',
-        provider: config.provider,
-        model: config.model,
-        usage,
-      });
-      void admin.rpc('increment_account_usage', {
-        p_account_id: accountId,
-        p_metric: 'ai_requests',
-        p_quantity: 1,
-      });
+      after(() =>
+        logAiUsage(admin, {
+          requestId: crypto.randomUUID(),
+          accountId,
+          conversationId,
+          mode: 'draft',
+          provider: config.provider,
+          model: config.model,
+          usage,
+        })
+      );
     } catch (usageError) {
       console.error('[ai/copilot] usage logging skipped', usageError);
     }

@@ -7,6 +7,8 @@ import { generateReply } from '@/lib/ai/generate'
 import { buildSystemPrompt } from '@/lib/ai/defaults'
 import { latestUserMessage } from '@/lib/ai/query'
 import { AiError, type ChatMessage } from '@/lib/ai/types'
+import { logAiUsage } from '@/lib/ai/usage'
+import { supabaseAdmin } from '@/lib/ai/admin-client'
 
 // Keep the tested transcript bounded, mirroring the live context window.
 const MAX_TURNS = 20
@@ -53,6 +55,19 @@ export async function POST(request: Request) {
       )
     }
 
+    const requestId =
+      typeof body?.requestId === 'string' ? body.requestId.trim() : ''
+    const validRequestId =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        requestId,
+      )
+    if (!validRequestId) {
+      return NextResponse.json(
+        { error: 'A valid requestId is required' },
+        { status: 400 },
+      )
+    }
+
     const config = await loadAiConfig(supabase, accountId, {
       requireActive: false,
     }).catch((err) => {
@@ -84,7 +99,23 @@ export async function POST(request: Request) {
       knowledge,
     })
 
-    const { text, handoff } = await generateReply({ config, systemPrompt, messages })
+    const { text, handoff, usage } = await generateReply({
+      config,
+      systemPrompt,
+      messages,
+    })
+
+    // Await this best-effort write so an immediate Usage-tab refresh sees the
+    // successful call. The stable request UUID makes a transport retry a no-op.
+    await logAiUsage(supabaseAdmin(), {
+      requestId,
+      accountId,
+      conversationId: null,
+      mode: 'draft',
+      provider: config.provider,
+      model: config.model,
+      usage,
+    })
     return NextResponse.json({ reply: text, handoff })
   } catch (err) {
     if (err instanceof AiError) {

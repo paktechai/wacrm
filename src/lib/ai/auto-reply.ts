@@ -127,8 +127,8 @@ export async function dispatchInboundToAiReply(
     }
 
     // Provider usage happened even when the model requests a handoff.
-    incrementUsageBestEffort(accountId, SBYT_METRICS.aiRequests, 1)
-    void logAiUsage(db, {
+    await logAiUsage(db, {
+      requestId: crypto.randomUUID(),
       accountId,
       conversationId,
       mode: 'auto_reply',
