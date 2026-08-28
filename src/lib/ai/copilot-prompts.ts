@@ -19,7 +19,7 @@ export function buildCopilotTransformPrompt(
 
   if (action === 'translate') {
     return [
-      'You are SBYT CRM Translator.',
+      'You are Wova8 CRM Translator.',
       selectedLanguage,
       'Translate the supplied text faithfully into that selected target language.',
       'Preserve its meaning, facts, intent, tone, names, numbers, and links.',
@@ -29,7 +29,7 @@ export function buildCopilotTransformPrompt(
   }
 
   return [
-    'You are SBYT CRM Copilot.',
+    'You are Wova8 CRM Copilot.',
     selectedLanguage,
     'Rewrite the supplied draft so the output is clear, concise, professional, and natural for customer messaging in that selected target language.',
     'Preserve all facts, meaning, and intent; translate the draft when needed so the final output is entirely in the selected target language.',

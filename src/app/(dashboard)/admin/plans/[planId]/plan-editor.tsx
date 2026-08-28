@@ -113,7 +113,7 @@ export function PlanEditor({
     <div className="space-y-6">
       {systemManaged ? (
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs leading-5 text-amber-200">
-          SBYT Foundation is a system fallback plan. It stays private, active and uncapped so new workspaces remain usable until a commercial plan is assigned.
+          The Foundation plan is a system fallback. It stays private, active and uncapped so new workspaces remain usable until a commercial plan is assigned.
         </div>
       ) : null}
 

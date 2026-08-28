@@ -2,10 +2,10 @@
   "name": "wacrm",
   "version": "0.8.0",
   "private": true,
-  "description": "SBYT CRM — WhatsApp-first AI customer engagement, CRM, marketing and automation software by Sajid Byte Tech Solutions.",
+  "description": "Wova8 CRM — customer communication, relationship management, automation and AI-assisted business operations.",
   "license": "MIT",
-  "author": "Sajid Byte Tech Solutions",
-  "homepage": "https://crm.sbyt.app",
+  "author": "Wova8",
+  "homepage": "https://wova8.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/paktechai/wacrm.git"
@@ -14,7 +14,7 @@
     "url": "https://github.com/paktechai/wacrm/issues"
   },
   "keywords": [
-    "sbyt",
+    "wova8",
     "crm",
     "whatsapp",
     "whatsapp-business-api",

@@ -112,7 +112,7 @@ export async function POST(request: Request) {
           );
         }
         systemPrompt =
-          'You are SBYT CRM Copilot. Summarize this customer conversation for a busy human agent. Return concise plain text with: customer need, key facts, decisions/commitments, unresolved items, and recommended next step. Do not invent facts.';
+          'You are Wova8 CRM Copilot. Summarize this customer conversation for a busy human agent. Return concise plain text with: customer need, key facts, decisions/commitments, unresolved items, and recommended next step. Do not invent facts.';
         break;
       case 'translate':
         if (!targetLanguage) {
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
           );
         }
         systemPrompt =
-          'You are SBYT CRM Copilot. Recommend exactly one practical next action for the human agent based only on the conversation. Keep it under 30 words.';
+          'You are Wova8 CRM Copilot. Recommend exactly one practical next action for the human agent based only on the conversation. Keep it under 30 words.';
         break;
       case 'analyze':
         if (!conversationId || messages.length === 0) {
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
           );
         }
         systemPrompt =
-          'You are SBYT CRM Conversation Intelligence. Analyze the conversation and return ONLY valid JSON with keys: "sentiment" (positive|neutral|negative|unknown), "intent" (short phrase), "next_action" (short practical action), "lead_score" (integer 0-100). Do not add markdown.';
+          'You are Wova8 CRM Conversation Intelligence. Analyze the conversation and return ONLY valid JSON with keys: "sentiment" (positive|neutral|negative|unknown), "intent" (short phrase), "next_action" (short practical action), "lead_score" (integer 0-100). Do not add markdown.';
         break;
     }
 

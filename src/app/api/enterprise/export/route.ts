@@ -114,7 +114,7 @@ export async function GET() {
       status: 200,
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Content-Disposition": `attachment; filename="sbyt-crm-export-${safeDate}.json"`,
+        "Content-Disposition": `attachment; filename="wova8-crm-export-${safeDate}.json"`,
         "Cache-Control": "no-store, private",
       },
     });

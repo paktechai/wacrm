@@ -84,7 +84,7 @@ export async function getApiAccessState(accountId: string): Promise<ApiAccessSta
   }
 
   // Backwards compatibility for installations that have not introduced
-  // subscriptions yet. On SBYT production migration 041 guarantees a row.
+  // subscriptions yet. Production migration 041 guarantees a row.
   if (!subscription) return { allowed: true };
 
   if (subscription.status === 'paused' || subscription.status === 'cancelled') {

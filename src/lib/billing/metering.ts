@@ -1,9 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { SbytMetric } from './catalog'
+import type { Wova8Metric } from './catalog'
 
 export async function incrementUsage(
   accountId: string,
-  metric: SbytMetric | string,
+  metric: Wova8Metric | string,
   quantity = 1,
 ): Promise<number> {
   if (!accountId) throw new Error('accountId is required')
@@ -32,7 +32,7 @@ export async function incrementUsage(
  */
 export function incrementUsageBestEffort(
   accountId: string,
-  metric: SbytMetric | string,
+  metric: Wova8Metric | string,
   quantity = 1,
 ): void {
   void incrementUsage(accountId, metric, quantity).catch((error) => {

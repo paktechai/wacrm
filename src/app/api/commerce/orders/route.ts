@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     const discount = Math.max(0, Number(body?.discount ?? 0));
     const tax = Math.max(0, Number(body?.tax ?? 0));
     const total = Math.max(0, Math.round((subtotal - discount + tax) * 100) / 100);
-    const orderNumber = `SBYT-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
+    const orderNumber = `WOVA8-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
 
     const { data: order, error: orderError } = await supabase
       .from("orders")

@@ -1,4 +1,4 @@
-export const SBYT_FEATURES = {
+export const WOVA8_FEATURES = {
   whatsappMessaging: 'whatsapp_messaging',
   contacts: 'contacts',
   pipelines: 'pipelines',
@@ -10,7 +10,7 @@ export const SBYT_FEATURES = {
   team: 'team',
 } as const
 
-export const SBYT_METRICS = {
+export const WOVA8_METRICS = {
   messagesSent: 'messages_sent',
   broadcastRecipients: 'broadcast_recipients',
   aiRequests: 'ai_requests',
@@ -20,5 +20,14 @@ export const SBYT_METRICS = {
   whatsappNumbers: 'whatsapp_numbers',
 } as const
 
-export type SbytFeature = (typeof SBYT_FEATURES)[keyof typeof SBYT_FEATURES]
-export type SbytMetric = (typeof SBYT_METRICS)[keyof typeof SBYT_METRICS]
+export type Wova8Feature = (typeof WOVA8_FEATURES)[keyof typeof WOVA8_FEATURES]
+export type Wova8Metric = (typeof WOVA8_METRICS)[keyof typeof WOVA8_METRICS]
+
+/** @deprecated Temporary source-compatibility aliases for deployed extensions. */
+export const SBYT_FEATURES = WOVA8_FEATURES
+/** @deprecated Temporary source-compatibility aliases for deployed extensions. */
+export const SBYT_METRICS = WOVA8_METRICS
+/** @deprecated Use Wova8Feature. */
+export type SbytFeature = Wova8Feature
+/** @deprecated Use Wova8Metric. */
+export type SbytMetric = Wova8Metric

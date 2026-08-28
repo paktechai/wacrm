@@ -19,7 +19,7 @@ import {
   requireFeature,
   requireUsageAvailable,
 } from '@/lib/billing/entitlements'
-import { SBYT_FEATURES, SBYT_METRICS } from '@/lib/billing/catalog'
+import { WOVA8_FEATURES, WOVA8_METRICS } from '@/lib/billing/catalog'
 import { incrementUsageBestEffort } from '@/lib/billing/metering'
 
 interface DispatchArgs {
@@ -41,10 +41,10 @@ export async function dispatchInboundToAiReply(
     // tenant RLS. Explicit plan/lifecycle checks are mandatory before an
     // LLM or Meta side effect.
     const entitlements = await requireAccountService(db, accountId)
-    requireFeature(entitlements, SBYT_FEATURES.aiAssistant)
-    requireFeature(entitlements, SBYT_FEATURES.whatsappMessaging)
-    await requireUsageAvailable(db, entitlements, SBYT_METRICS.aiRequests, 1)
-    await requireUsageAvailable(db, entitlements, SBYT_METRICS.messagesSent, 1)
+    requireFeature(entitlements, WOVA8_FEATURES.aiAssistant)
+    requireFeature(entitlements, WOVA8_FEATURES.whatsappMessaging)
+    await requireUsageAvailable(db, entitlements, WOVA8_METRICS.aiRequests, 1)
+    await requireUsageAvailable(db, entitlements, WOVA8_METRICS.messagesSent, 1)
 
     const config = await loadAiConfig(db, accountId)
     if (!config || !config.autoReplyEnabled) return
@@ -93,7 +93,7 @@ export async function dispatchInboundToAiReply(
       latestUserMessage(messages),
     )
 
-    // Prefer the configured autonomous SBYT agent. If no active default
+    // Prefer the configured autonomous Wova8 agent. If no active default
     // persona is configured, preserve the proven legacy auto-reply behaviour.
     const autonomous = await runAutonomousAgent({
       db,
@@ -217,7 +217,7 @@ export async function dispatchInboundToAiReply(
       })
     }
 
-    incrementUsageBestEffort(accountId, SBYT_METRICS.messagesSent, 1)
+    incrementUsageBestEffort(accountId, WOVA8_METRICS.messagesSent, 1)
   } catch (err) {
     console.error('[ai auto-reply] dispatch failed:', err)
   }

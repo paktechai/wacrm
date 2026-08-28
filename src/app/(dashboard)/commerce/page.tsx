@@ -224,7 +224,7 @@ export default function CommercePage() {
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="font-semibold text-foreground">Payment link registry</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Store a secure provider checkout URL after your chosen payment gateway creates it. No card data is stored in SBYT CRM.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Store a secure provider checkout URL after your chosen payment gateway creates it. No card data is stored in Wova8 CRM.</p>
         <form onSubmit={createPaymentLink} className="mt-4 grid gap-3 md:grid-cols-5">
           <select name="orderId" className="rounded-xl border border-border bg-background px-3 py-2 text-sm"><option value="">No linked order</option>{orders.map((order) => <option key={order.id} value={order.id}>{order.order_number}</option>)}</select>
           <input name="provider" placeholder="Provider" defaultValue="manual" className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />

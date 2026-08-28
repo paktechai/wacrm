@@ -81,7 +81,7 @@ function LoginPageInner() {
           </div>
           <div>
             <CardTitle className="text-2xl font-semibold tracking-[-0.035em] text-foreground">
-              {inviteToken ? t("titleAccept") : "Welcome to SBYT CRM"}
+              {inviteToken ? t("titleAccept") : "Welcome to Wova8 CRM"}
             </CardTitle>
             <CardDescription className="mt-2 leading-6 text-muted-foreground">
               {inviteToken
@@ -155,7 +155,7 @@ function LoginPageInner() {
           <div className="my-6 flex items-center gap-3">
             <div className="h-px flex-1 bg-border" />
             <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              SBYT account
+              Wova8 account
             </span>
             <div className="h-px flex-1 bg-border" />
           </div>

@@ -1,6 +1,6 @@
 // ============================================================
 // Public API authentication — resolve a request's API key into an
-// account context and enforce the SBYT SaaS boundary.
+// account context and enforce the Wova8 SaaS boundary.
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -16,7 +16,7 @@ import { hasScope, type ApiScope } from '@/lib/api-keys/scopes';
 import { forbidden, rateLimited, unauthorized } from '@/lib/api/v1/respond';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { incrementUsageBestEffort } from '@/lib/billing/metering';
-import { SBYT_METRICS } from '@/lib/billing/catalog';
+import { WOVA8_METRICS } from '@/lib/billing/catalog';
 
 export interface ApiKeyContext {
   authType: 'api_key';
@@ -81,7 +81,7 @@ export async function requireApiKey(
   }
 
   touchLastUsed(row.id);
-  incrementUsageBestEffort(row.account_id, SBYT_METRICS.apiRequests, 1);
+  incrementUsageBestEffort(row.account_id, WOVA8_METRICS.apiRequests, 1);
 
   return {
     authType: 'api_key',

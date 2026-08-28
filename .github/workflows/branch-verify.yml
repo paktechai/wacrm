@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/sbyt-crm-finalization
+      - feat/wova8-rebrand-prep
 
 concurrency:
   group: branch-verify-${{ github.ref }}

@@ -1,5 +1,5 @@
-const CACHE = "sbyt-crm-shell-v1";
-const SHELL = ["/offline.html", "/sbyt-pwa-icon.svg", "/inbox-doodle.svg"];
+const CACHE = "wova8-crm-shell-v1";
+const SHELL = ["/offline.html", "/wova8-pwa-icon.svg", "/inbox-doodle.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));

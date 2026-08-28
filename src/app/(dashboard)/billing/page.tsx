@@ -34,7 +34,7 @@ export default async function BillingPage() {
       <header>
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-primary">
           <CreditCard className="size-4" />
-          SBYT subscription
+          Wova8 subscription
         </div>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground">
           Plan & usage
@@ -49,13 +49,13 @@ export default async function BillingPage() {
           icon={<Layers3 className="size-4" />}
           label="Current plan"
           value={entitlements.planName ?? 'No plan assigned'}
-          detail={entitlements.planCode ? `Code: ${entitlements.planCode}` : 'Contact SBYT for plan assignment'}
+          detail={entitlements.planCode ? `Code: ${entitlements.planCode}` : 'Contact Wova8 for plan assignment'}
         />
         <SummaryCard
           icon={<ShieldCheck className="size-4" />}
           label="Workspace status"
           value={formatLabel(entitlements.lifecycleStatus ?? 'active')}
-          detail="Controlled by SBYT account lifecycle"
+          detail="Controlled by Wova8 account lifecycle"
         />
         <SummaryCard
           icon={<Gauge className="size-4" />}
@@ -69,7 +69,7 @@ export default async function BillingPage() {
         <div className="rounded-2xl border border-border bg-card p-5">
           <h2 className="text-sm font-semibold text-foreground">Included capabilities</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Features currently enabled by your SBYT plan.
+            Features currently enabled by your Wova8 plan.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {enabledFeatures.length > 0 ? (
@@ -149,7 +149,7 @@ export default async function BillingPage() {
       </section>
 
       <div className="rounded-2xl border border-border bg-muted/30 px-5 py-4 text-xs leading-5 text-muted-foreground">
-        Commercial checkout is intentionally provider-neutral for now. SBYT can assign plans from Super Admin; payment-gateway activation can be connected later without changing the entitlement model.
+        Commercial checkout is intentionally provider-neutral for now. Wova8 can assign plans from Super Admin; payment-gateway activation can be connected later without changing the entitlement model.
       </div>
     </div>
   )

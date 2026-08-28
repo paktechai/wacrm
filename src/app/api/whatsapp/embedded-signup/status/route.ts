@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireRole, toErrorResponse } from "@/lib/auth/account";
+import { WOVA8 } from "@/lib/brand";
 
 export async function GET() {
   try {
@@ -8,7 +9,7 @@ export async function GET() {
 
     const appId = process.env.META_APP_ID?.trim() || null;
     const configId = process.env.META_EMBEDDED_SIGNUP_CONFIG_ID?.trim() || null;
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || null;
+    const siteUrl = WOVA8.crmUrl;
 
     return NextResponse.json(
       {

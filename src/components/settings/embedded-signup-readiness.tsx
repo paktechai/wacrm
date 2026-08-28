@@ -59,7 +59,7 @@ export function EmbeddedSignupReadiness() {
             One-click WhatsApp onboarding
           </h2>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-            The CRM is prepared for Meta&apos;s embedded onboarding flow. Activation requires the SBYT domain, Meta Tech Provider setup, App ID and Embedded Signup configuration ID.
+            The CRM is prepared for Meta&apos;s embedded onboarding flow. Activation requires the Wova8 domain, Meta Tech Provider setup, App ID and Embedded Signup configuration ID.
           </p>
         </div>
         {loading ? (

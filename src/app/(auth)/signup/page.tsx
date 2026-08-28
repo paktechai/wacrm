@@ -94,7 +94,7 @@ function SignupPageInner() {
               <CardDescription className="mt-2 leading-6 text-muted-foreground">
                 We sent a confirmation link to{" "}
                 <span className="font-medium text-foreground">{email}</span>.
-                Verify your email to activate your SBYT account.
+                Verify your email to activate your Wova8 account.
               </CardDescription>
             </div>
           </CardHeader>
@@ -132,17 +132,17 @@ function SignupPageInner() {
               )}
             </div>
             <span className="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-              One SBYT account
+              One Wova8 account
             </span>
           </div>
           <div>
             <CardTitle className="text-2xl font-semibold tracking-[-0.035em] text-foreground">
-              {inviteToken ? "Create account & join" : "Create your SBYT account"}
+              {inviteToken ? "Create account & join" : "Create your Wova8 account"}
             </CardTitle>
             <CardDescription className="mt-2 leading-6 text-muted-foreground">
               {inviteToken
                 ? "Verify your email, then accept the invitation to join your team."
-                : "Start with SBYT CRM and use the same account across future SBYT software."}
+                : "Start with Wova8 CRM and use the same account across future Wova8 software."}
             </CardDescription>
           </div>
         </CardHeader>
@@ -208,7 +208,7 @@ function SignupPageInner() {
           <div className="my-6 flex items-center gap-3">
             <div className="h-px flex-1 bg-border" />
             <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              SBYT ecosystem
+              Wova8 ecosystem
             </span>
             <div className="h-px flex-1 bg-border" />
           </div>

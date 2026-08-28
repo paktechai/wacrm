@@ -16,7 +16,7 @@ import {
   requireFeature,
   requireUsageAvailable,
 } from '@/lib/billing/entitlements'
-import { SBYT_FEATURES, SBYT_METRICS } from '@/lib/billing/catalog'
+import { WOVA8_FEATURES, WOVA8_METRICS } from '@/lib/billing/catalog'
 import { incrementUsageBestEffort } from '@/lib/billing/metering'
 
 export async function POST(request: Request) {
@@ -27,11 +27,11 @@ export async function POST(request: Request) {
     // persistence step, but it cannot unsend a WhatsApp message once Meta
     // accepted it, so entitlement + usage checks must happen here.
     const entitlements = await requireAccountService(supabase, accountId)
-    requireFeature(entitlements, SBYT_FEATURES.whatsappMessaging)
+    requireFeature(entitlements, WOVA8_FEATURES.whatsappMessaging)
     await requireUsageAvailable(
       supabase,
       entitlements,
-      SBYT_METRICS.messagesSent,
+      WOVA8_METRICS.messagesSent,
       1,
     )
 
@@ -150,7 +150,7 @@ export async function POST(request: Request) {
         replyToMessageId: reply_to_message_id,
       })
 
-      incrementUsageBestEffort(accountId, SBYT_METRICS.messagesSent, 1)
+      incrementUsageBestEffort(accountId, WOVA8_METRICS.messagesSent, 1)
 
       return NextResponse.json({
         success: true,

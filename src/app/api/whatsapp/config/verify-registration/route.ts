@@ -143,8 +143,8 @@ export async function GET() {
       if (!checks.waba_subscribed_to_app) {
         errors.push(
           subs.length > 0
-            ? 'This WABA is subscribed to another Meta app, not the SBYT app. Use an access token issued for the SBYT Meta app, then save again.'
-            : 'The SBYT Meta app is not subscribed to this WABA. Save the configuration again to subscribe.',
+            ? 'This WABA is subscribed to another Meta app, not the Wova8 app. Use an access token issued for the Wova8 Meta app, then save again.'
+            : 'The Wova8 Meta app is not subscribed to this WABA. Save the configuration again to subscribe.',
         )
       }
     } catch (err) {

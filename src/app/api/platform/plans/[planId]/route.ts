@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { toErrorResponse } from "@/lib/auth/account";
-import { SBYT_FEATURES, SBYT_METRICS } from "@/lib/billing/catalog";
+import { WOVA8_FEATURES, WOVA8_METRICS } from "@/lib/billing/catalog";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -14,8 +14,8 @@ type PatchPlanBody = {
   limits?: Record<string, number | null>;
 };
 
-const ALLOWED_FEATURES = new Set<string>(Object.values(SBYT_FEATURES));
-const ALLOWED_LIMITS = new Set<string>(Object.values(SBYT_METRICS));
+const ALLOWED_FEATURES = new Set<string>(Object.values(WOVA8_FEATURES));
+const ALLOWED_LIMITS = new Set<string>(Object.values(WOVA8_METRICS));
 
 function normalizeFeatures(
   value: Record<string, boolean> | undefined,
@@ -109,7 +109,7 @@ export async function PATCH(
         limits !== null)
     ) {
       return NextResponse.json(
-        { error: "The SBYT Foundation plan is system-managed" },
+        { error: "The Foundation plan is system-managed" },
         { status: 400 },
       );
     }

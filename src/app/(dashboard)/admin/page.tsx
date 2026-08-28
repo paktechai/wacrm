@@ -83,7 +83,7 @@ export default async function PlatformAdminPage() {
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
             <ShieldCheck className="size-4" />
-            SBYT Platform Control
+            Wova8 Platform Control
           </div>
           <h1 className="text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl">
             Super Admin
@@ -198,7 +198,7 @@ export default async function PlatformAdminPage() {
           ))}
           {planOptions.length === 0 ? (
             <div className="px-5 py-10 text-center text-sm text-muted-foreground">
-              No plans yet. Create the first SBYT CRM plan above.
+              No plans yet. Create the first Wova8 CRM plan above.
             </div>
           ) : null}
         </div>

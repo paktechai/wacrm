@@ -141,7 +141,7 @@ export default function ResetPasswordPage() {
               Choose a new password
             </CardTitle>
             <CardDescription className="mt-2 leading-6 text-muted-foreground">
-              Enter and confirm your new SBYT account password.
+              Enter and confirm your new Wova8 account password.
             </CardDescription>
           </div>
         </CardHeader>

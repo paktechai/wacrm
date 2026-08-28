@@ -381,7 +381,7 @@ export async function POST(request: Request) {
           })
           if (!isMetaAppSubscribed(subscribedApps, expectedAppId)) {
             subscriptionError =
-              'The access token belongs to a different Meta app. Generate a token for the SBYT Meta app and reconnect.'
+              'The access token belongs to a different Meta app. Generate a token for the Wova8 Meta app and reconnect.'
           } else {
             subscribedAppsAt = new Date().toISOString()
           }

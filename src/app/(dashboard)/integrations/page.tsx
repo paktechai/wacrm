@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { CheckCircle2, Copy, Globe2, MessageCircle, PlugZap, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { WOVA8 } from "@/lib/brand";
 
 type Integration = {
   id: string;
@@ -102,8 +103,8 @@ export default function IntegrationsPage() {
   }
 
   function embed(widget: Widget) {
-    const base = typeof window !== "undefined" ? window.location.origin : "https://app.sbyt.app";
-    return `<script src="${base}/sbyt-chat-widget.js" data-sbyt-key="${widget.public_key}" defer></script>`;
+    const base = typeof window !== "undefined" ? window.location.origin : WOVA8.crmUrl;
+    return `<script src="${base}/wova8-chat-widget.js" data-wova8-key="${widget.public_key}" defer></script>`;
   }
 
   return (

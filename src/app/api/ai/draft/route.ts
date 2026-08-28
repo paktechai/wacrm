@@ -15,18 +15,18 @@ import {
   requireFeature,
   requireUsageAvailable,
 } from '@/lib/billing/entitlements'
-import { SBYT_FEATURES, SBYT_METRICS } from '@/lib/billing/catalog'
+import { WOVA8_FEATURES, WOVA8_METRICS } from '@/lib/billing/catalog'
 
 export async function POST(request: Request) {
   try {
     const { supabase, accountId, userId } = await requireRole('agent')
 
     const entitlements = await requireAccountService(supabase, accountId)
-    requireFeature(entitlements, SBYT_FEATURES.aiAssistant)
+    requireFeature(entitlements, WOVA8_FEATURES.aiAssistant)
     await requireUsageAvailable(
       supabase,
       entitlements,
-      SBYT_METRICS.aiRequests,
+      WOVA8_METRICS.aiRequests,
       1,
     )
 

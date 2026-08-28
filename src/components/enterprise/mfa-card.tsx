@@ -45,7 +45,7 @@ export function MfaCard({ onLevelChange }: { onLevelChange?: (level: string | nu
       const supabase = createClient();
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
-        friendlyName: "SBYT CRM Authenticator",
+        friendlyName: "Wova8 CRM Authenticator",
       });
       if (error) throw error;
       setFactorId(data.id);

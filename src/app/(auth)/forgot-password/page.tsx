@@ -87,7 +87,7 @@ export default function ForgotPasswordPage() {
               Reset your password
             </CardTitle>
             <CardDescription className="mt-2 leading-6 text-muted-foreground">
-              Enter your SBYT account email and we&apos;ll send you a secure reset link.
+              Enter your Wova8 account email and we&apos;ll send you a secure reset link.
             </CardDescription>
           </div>
         </CardHeader>

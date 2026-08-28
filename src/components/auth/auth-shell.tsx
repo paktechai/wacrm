@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Bot, ShieldCheck, Workflow } from "lucide-react";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 interface AuthShellProps {
   children: ReactNode;
@@ -24,24 +25,7 @@ export function AuthShell({ children }: AuthShellProps) {
             className="absolute inset-0 opacity-25 [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [background-size:42px_42px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"
           />
 
-          <div className="relative flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-gradient-to-br from-indigo-400 via-primary to-teal-400 shadow-lg shadow-primary/20">
-              <span className="text-sm font-black tracking-[-0.08em] text-white">S</span>
-            </div>
-            <div className="leading-none">
-              <div className="flex items-baseline gap-2">
-                <span className="text-base font-black tracking-[0.12em] text-foreground">
-                  SBYT
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-                  CRM
-                </span>
-              </div>
-              <span className="mt-1.5 block text-[10px] font-medium tracking-[0.06em] text-muted-foreground">
-                Sajid Byte Tech Solutions
-              </span>
-            </div>
-          </div>
+          <div className="relative"><BrandMark /></div>
 
           <div className="relative my-auto max-w-2xl py-14">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
@@ -56,7 +40,7 @@ export function AuthShell({ children }: AuthShellProps) {
             </h1>
             <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground">
               Manage WhatsApp conversations, contacts, campaigns, pipelines,
-              automation and AI from one modern SBYT workspace.
+              automation and AI from one modern Wova8 workspace.
             </p>
 
             <div className="mt-10 grid max-w-xl gap-3 sm:grid-cols-3">
@@ -79,27 +63,14 @@ export function AuthShell({ children }: AuthShellProps) {
           </div>
 
           <div className="relative flex items-center justify-between text-[10px] font-medium tracking-[0.04em] text-muted-foreground">
-            <span>SBYT · ONE TECH ECOSYSTEM</span>
-            <span>sbyt.app</span>
+            <span>WOVA8 · BUSINESS SOFTWARE</span>
+            <span>wova8.com</span>
           </div>
         </section>
 
         <section className="flex min-h-screen items-center justify-center px-4 py-10 sm:px-8 lg:px-10">
           <div className="w-full max-w-md">
-            <div className="mb-7 flex items-center justify-center gap-2.5 lg:hidden">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-400 via-primary to-teal-400 shadow-md shadow-primary/20">
-                <span className="text-xs font-black tracking-[-0.08em] text-white">S</span>
-              </div>
-              <div className="leading-none">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-sm font-black tracking-[0.11em]">SBYT</span>
-                  <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary">CRM</span>
-                </div>
-                <span className="mt-1 block text-[9px] text-muted-foreground">
-                  Sajid Byte Tech Solutions
-                </span>
-              </div>
-            </div>
+            <div className="mb-7 flex justify-center lg:hidden"><BrandMark compact /></div>
             {children}
           </div>
         </section>

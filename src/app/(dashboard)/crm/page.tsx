@@ -154,7 +154,7 @@ export default function CrmWorkspacePage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">SBYT CRM 2.0</div>
+          <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">Wova8 CRM 2.0</div>
           <h1 className="text-3xl font-semibold tracking-[-0.04em] text-foreground">Work & follow-ups</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             Tasks, reminders and appointments live beside conversations and deals so nothing falls through the cracks.

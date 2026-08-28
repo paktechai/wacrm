@@ -32,7 +32,7 @@ export default async function PlatformAuditPage() {
           Administrative activity
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Latest 200 platform-level changes made through SBYT Super Admin.
+          Latest 200 platform-level changes made through Wova8 Super Admin.
         </p>
       </header>
 

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { useAuth } from "@/hooks/use-auth";
 import { useTotalUnread } from "@/hooks/use-total-unread";
 import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
@@ -197,16 +198,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       >
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
           <Link href="/dashboard" className="group flex min-w-0 items-center gap-2.5">
-            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-gradient-to-br from-indigo-400 via-primary to-teal-400 text-primary-foreground shadow-sm shadow-primary/20">
-              <span className="text-[11px] font-black tracking-[-0.08em] text-white">S</span>
-            </div>
-            <div className="min-w-0 leading-none">
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-[13px] font-extrabold tracking-[0.08em] text-foreground">SBYT</span>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">CRM</span>
-              </div>
-              <span className="mt-1 block truncate text-[9px] font-medium tracking-[0.04em] text-muted-foreground">Customer Intelligence</span>
-            </div>
+            <BrandMark compact />
           </Link>
           <button type="button" onClick={onClose} aria-label={t("closeMenu")} className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden">
             <X className="h-5 w-5" />

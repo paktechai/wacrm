@@ -12,7 +12,9 @@ export interface PlatformAdminContext {
 
 function bootstrapEmails(): Set<string> {
   return new Set(
-    (process.env.SBYT_SUPER_ADMIN_EMAILS ?? "")
+    (process.env.WOVA8_SUPER_ADMIN_EMAILS ??
+      process.env.SBYT_SUPER_ADMIN_EMAILS ??
+      "")
       .split(",")
       .map((value) => value.trim().toLowerCase())
       .filter(Boolean),
@@ -21,9 +23,10 @@ function bootstrapEmails(): Set<string> {
 
 /**
  * Returns the current platform-admin context, or null when the caller
- * is authenticated but is not an SBYT platform administrator.
+ * is authenticated but is not a Wova8 platform administrator.
  *
- * Bootstrap: SBYT_SUPER_ADMIN_EMAILS may contain comma-separated emails.
+ * Bootstrap: WOVA8_SUPER_ADMIN_EMAILS may contain comma-separated emails.
+ * The former SBYT variable remains a deployment-transition fallback.
  * This lets the first super admin enter the platform before a DB row exists.
  */
 export async function getPlatformAdmin(): Promise<PlatformAdminContext | null> {

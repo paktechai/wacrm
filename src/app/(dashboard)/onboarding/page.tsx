@@ -60,7 +60,7 @@ export default async function OnboardingPage() {
       title: 'Plan assigned',
       description: entitlements.planName
         ? `${entitlements.planName} is active for this workspace.`
-        : 'An SBYT plan still needs to be assigned.',
+        : 'An Wova8 plan still needs to be assigned.',
       done: Boolean(entitlements.planId),
       icon: CreditCard,
       href: '/billing',
@@ -72,7 +72,7 @@ export default async function OnboardingPage() {
         ? 'A WhatsApp Business number is connected.'
         : metaReady
           ? 'Meta Embedded Signup is configured and ready to start.'
-          : 'Meta connection will be enabled after the SBYT domain and Tech Provider configuration are ready.',
+          : 'Meta connection will be enabled after the Wova8 domain and Tech Provider configuration are ready.',
       done: Boolean(whatsapp?.phone_number_id),
       icon: MessageSquare,
       href: '/settings?tab=whatsapp',
@@ -121,7 +121,7 @@ export default async function OnboardingPage() {
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-primary">
             <Rocket className="size-4" />
-            SBYT CRM setup
+            Wova8 CRM setup
           </div>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground">
             Get your workspace ready
@@ -193,7 +193,7 @@ export default async function OnboardingPage() {
 
       {!metaReady ? (
         <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-5 py-4 text-xs leading-5 text-amber-200">
-          Meta Embedded Signup is intentionally waiting for the SBYT domain/Tech Provider setup. The rest of the CRM can be configured and tested independently.
+          Meta Embedded Signup is intentionally waiting for the Wova8 domain/Tech Provider setup. The rest of the CRM can be configured and tested independently.
         </div>
       ) : null}
     </div>

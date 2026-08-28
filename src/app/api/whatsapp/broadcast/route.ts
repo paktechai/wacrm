@@ -20,7 +20,7 @@ import {
   requireFeature,
   requireUsageAvailable,
 } from '@/lib/billing/entitlements'
-import { SBYT_FEATURES, SBYT_METRICS } from '@/lib/billing/catalog'
+import { WOVA8_FEATURES, WOVA8_METRICS } from '@/lib/billing/catalog'
 import { incrementUsageBestEffort } from '@/lib/billing/metering'
 
 interface BroadcastResult {
@@ -84,11 +84,11 @@ export async function POST(request: Request) {
 
     // Plan checks happen before decrypting credentials or contacting Meta.
     const entitlements = await requireAccountService(supabase, accountId)
-    requireFeature(entitlements, SBYT_FEATURES.broadcasts)
+    requireFeature(entitlements, WOVA8_FEATURES.broadcasts)
     await requireUsageAvailable(
       supabase,
       entitlements,
-      SBYT_METRICS.broadcastRecipients,
+      WOVA8_METRICS.broadcastRecipients,
       recipients.length,
     )
 
@@ -198,10 +198,10 @@ export async function POST(request: Request) {
     if (sentCount > 0) {
       incrementUsageBestEffort(
         accountId,
-        SBYT_METRICS.broadcastRecipients,
+        WOVA8_METRICS.broadcastRecipients,
         sentCount,
       )
-      incrementUsageBestEffort(accountId, SBYT_METRICS.messagesSent, sentCount)
+      incrementUsageBestEffort(accountId, WOVA8_METRICS.messagesSent, sentCount)
     }
 
     return NextResponse.json({
