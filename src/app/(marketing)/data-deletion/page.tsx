@@ -18,7 +18,8 @@ export default function DataDeletionPage() {
         title="Request deletion of your data."
       >
         Wova8 provides a verified request process for personal data associated
-        with a Wova8 CRM account or connected application.
+        with a Wova8 CRM account or connected application. Wova8 is operated by
+        SM SERVICES.
       </PageIntro>
       <section className="mx-auto grid max-w-4xl gap-4 px-5 pb-8 sm:grid-cols-3 sm:px-8">
         {[
@@ -47,9 +48,9 @@ export default function DataDeletionPage() {
             Email{' '}
             <a
               className="text-violet-200 hover:text-white"
-              href={`mailto:${WOVA8.emails.privacy}?subject=Data%20deletion%20request`}
+              href={`mailto:${WOVA8.emails.support}?subject=Data%20deletion%20request`}
             >
-              {WOVA8.emails.privacy}
+              {WOVA8.emails.support}
             </a>{' '}
             with the subject “Data deletion request”.
           </li>

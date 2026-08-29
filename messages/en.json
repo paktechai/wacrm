@@ -1567,6 +1567,7 @@
       "emailChangeHint": "Check the inbox for <bold>{oldEmail}</bold> and <bold>{newEmail}</bold> — both need to confirm before the change takes effect.",
       "accountDetails": "Account details",
       "role": "Role",
+      "workspaceRole": "Workspace role",
       "joined": "Joined",
       "userId": "User ID",
       "loading": "Loading your profile…",

@@ -20,13 +20,13 @@ const contacts = [
   [
     ShieldCheck,
     'Privacy',
-    WOVA8.emails.privacy,
+    WOVA8.emails.support,
     'Privacy enquiries, data-subject requests, and personal-data questions.',
   ],
   [
     Mail,
     'Legal',
-    WOVA8.emails.legal,
+    WOVA8.emails.support,
     'Formal legal notices and terms-related enquiries.',
   ],
 ] as const;
@@ -37,12 +37,12 @@ export default function ContactPage() {
       <PageIntro eyebrow="Contact" title="Start with the right conversation.">
         Contact Wova8 about product support, business requirements, privacy, or
         legal matters. Include your workspace name when your enquiry relates to
-        an existing CRM account.
+        an existing CRM account. {WOVA8.legalDisclosure}
       </PageIntro>
       <section className="mx-auto grid max-w-7xl gap-4 px-5 pb-24 sm:px-8 lg:grid-cols-3">
         {contacts.map(([Icon, title, email, text]) => (
           <a
-            key={email}
+            key={title}
             href={`mailto:${email}`}
             className="group rounded-3xl border border-white/8 bg-white/[0.035] p-7 transition hover:border-violet-300/25 hover:bg-white/[0.055]"
           >

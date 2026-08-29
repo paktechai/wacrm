@@ -93,7 +93,7 @@ Use `docs/WOVA8_META_READINESS.md`: public website `https://wova8.com`, App Doma
 
 ### Mail
 
-Provision and test `support@wova8.com`, `privacy@wova8.com`, and `legal@wova8.com` before public launch/Meta submission. No mailbox was created in this preparation.
+Provision and test `support@wova8.com` before public launch/Meta submission. It is the single public route for support, privacy, legal, and deletion requests. Wova8 is the public brand/product identity and is operated by the legal business `SM SERVICES`; separate `privacy@wova8.com` and `legal@wova8.com` mailboxes are not required.
 
 ## G. Regression tests
 
@@ -116,7 +116,7 @@ Provision and test `support@wova8.com`, `privacy@wova8.com`, and `legal@wova8.co
 Every remaining reference is intentional:
 
 - Supabase migrations 040–054 and `docs/SBYT_CRM_FINAL_CHECKLIST.md`: immutable migration history and dated production evidence.
-- Database read-only audit: one old-brand account name and one historical `SBYT Foundation` system-plan name. Neither is rewritten without a classified, approved business-data migration.
+- The old-brand account name was classified as tenant-visible workspace metadata and renamed to `Wova8 Platform` after explicit approval. The historical `SBYT Foundation` system-plan name remains untouched as migration/billing compatibility data.
 - `crm.sbyt.app`: legacy/rollback origin in centralized config, tests, environment example, audit, and runbook.
 - `SBYT_SUPER_ADMIN_EMAILS`: temporary fallback preventing platform-admin lockout.
 - `SBYT_FEATURES`, `SBYT_METRICS`, and legacy types: deprecated source-compatibility aliases.

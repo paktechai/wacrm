@@ -4,16 +4,16 @@ Status: values prepared for review; nothing in this document authorizes a Meta d
 
 ## Public identity
 
-| Meta field / review evidence | Prepared value                                                                 |
-| ---------------------------- | ------------------------------------------------------------------------------ |
-| Company website              | `https://wova8.com`                                                            |
-| Product application          | `https://crm.wova8.com`                                                        |
-| Privacy Policy               | `https://wova8.com/privacy`                                                    |
-| Terms of Service             | `https://wova8.com/terms`                                                      |
-| User Data Deletion           | `https://wova8.com/data-deletion`                                              |
-| Contact                      | `https://wova8.com/contact`                                                    |
-| Support email                | `support@wova8.com` (mailbox must be provisioned and tested before submission) |
-| Privacy email                | `privacy@wova8.com` (mailbox must be provisioned and tested before submission) |
+| Meta field / review evidence | Prepared value                                                                        |
+| ---------------------------- | ------------------------------------------------------------------------------------- |
+| Company website              | `https://wova8.com`                                                                   |
+| Product application          | `https://crm.wova8.com`                                                               |
+| Privacy Policy               | `https://wova8.com/privacy`                                                           |
+| Terms of Service             | `https://wova8.com/terms`                                                             |
+| User Data Deletion           | `https://wova8.com/data-deletion`                                                     |
+| Contact                      | `https://wova8.com/contact`                                                           |
+| Public contact email         | `support@wova8.com` (single route for support, privacy, legal, and deletion requests) |
+| Legal operating business     | `SM SERVICES` (Wova8 remains the public brand/product identity)                       |
 
 ## Meta Developers values to review after domain validation
 
@@ -33,7 +33,7 @@ Meta field names differ by product and dashboard version. Enter a URL only where
 
 ## Review narrative
 
-Wova8 is a software company. Wova8 CRM is its current customer-operations product. The CRM supports contacts, conversations, inbox collaboration, assignments, notifications, tags, deals and pipelines, broadcasts, automations, flows, AI-assisted functions, analytics, and WhatsApp Business Platform as an integrated communication channel. WhatsApp does not define the entire company or product.
+Wova8 is the public software brand operated by the legal business SM SERVICES. Wova8 CRM is its current customer-operations product. The CRM supports contacts, conversations, inbox collaboration, assignments, notifications, tags, deals and pipelines, broadcasts, automations, flows, AI-assisted functions, analytics, and WhatsApp Business Platform as an integrated communication channel. WhatsApp does not define the entire business or product.
 
 Do not claim Wova8 is a Meta Partner, WhatsApp Partner, Meta Business Partner, Solution Partner, or Tech Provider unless Meta has formally granted the relevant status.
 
@@ -41,7 +41,7 @@ Do not claim Wova8 is a Meta Partner, WhatsApp Partner, Meta Business Partner, S
 
 - Both domains resolve publicly over valid HTTPS and present the same Wova8 identity.
 - Privacy, Terms, Data Deletion, Contact, and product pages are reachable without login and contain no placeholders.
-- The three Wova8 email mailboxes used publicly are provisioned, can receive mail, and have appropriate SPF/DKIM/DMARC configuration.
+- `support@wova8.com`, the single public contact mailbox, can receive mail and has appropriate SPF/DKIM/DMARC configuration.
 - Supabase accepts the new CRM callback without removing the legacy rollback callback.
 - The webhook endpoint verifies Meta signatures and remains tenant-scoped.
 - Embedded Signup configuration uses the intended Meta app, WABA, permissions, and business portfolio; no disabled asset is reused to bypass enforcement.

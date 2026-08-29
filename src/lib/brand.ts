@@ -16,6 +16,8 @@ function canonicalUrl(value: string | undefined, fallback: string): string {
 export const WOVA8 = Object.freeze({
   companyName: 'Wova8',
   productName: 'Wova8 CRM',
+  legalOperator: 'SM SERVICES',
+  legalDisclosure: 'Wova8 is operated by SM SERVICES.',
   description:
     'Customer communication, relationship management, automation, and AI-assisted business operations in one secure workspace.',
   companyUrl: canonicalUrl(
@@ -26,8 +28,6 @@ export const WOVA8 = Object.freeze({
   legacyCrmUrl: 'https://crm.sbyt.app',
   emails: Object.freeze({
     support: 'support@wova8.com',
-    privacy: 'privacy@wova8.com',
-    legal: 'legal@wova8.com',
   }),
 });
 

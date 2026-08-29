@@ -19,12 +19,13 @@ export default function PrivacyPage() {
       <LegalArticle>
         <h2>1. Scope and roles</h2>
         <p>
-          This policy applies to Wova8&apos;s public website and Wova8 CRM. For
-          customer data placed in a CRM workspace, the subscribing organization
-          generally determines why and how that data is used, and Wova8
-          processes it to provide the service. Wova8 acts as controller for its
-          own account, support, security, and website administration data where
-          applicable.
+          Wova8 is the public brand and product identity operated by SM
+          SERVICES. This policy applies to Wova8&apos;s public website and Wova8
+          CRM. For customer data placed in a CRM workspace, the subscribing
+          organization generally determines why and how that data is used, and
+          Wova8 processes it to provide the service. Wova8 acts as controller
+          for its own account, support, security, and website administration
+          data where applicable.
         </p>
         <h2>2. Information we process</h2>
         <ul>
@@ -93,9 +94,9 @@ export default function PrivacyPage() {
           also contact Wova8 at{' '}
           <a
             className="text-violet-200 hover:text-white"
-            href={`mailto:${WOVA8.emails.privacy}`}
+            href={`mailto:${WOVA8.emails.support}`}
           >
-            {WOVA8.emails.privacy}
+            {WOVA8.emails.support}
           </a>
           .
         </p>

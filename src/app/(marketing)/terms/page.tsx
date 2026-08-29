@@ -19,8 +19,9 @@ export default function TermsPage() {
       <LegalArticle>
         <h2>1. Agreement and authority</h2>
         <p>
-          By accessing or using the service, you agree to these terms. If you
-          use the service for an organization, you confirm that you are
+          Wova8 is the public brand and product identity operated by SM
+          SERVICES. By accessing or using the service, you agree to these terms.
+          If you use the service for an organization, you confirm that you are
           authorized to bind that organization and administer its workspace.
         </p>
         <h2>2. Accounts and authorized use</h2>
@@ -91,9 +92,9 @@ export default function TermsPage() {
           Questions about these terms may be sent to{' '}
           <a
             className="text-violet-200 hover:text-white"
-            href={`mailto:${WOVA8.emails.legal}`}
+            href={`mailto:${WOVA8.emails.support}`}
           >
-            {WOVA8.emails.legal}
+            {WOVA8.emails.support}
           </a>
           . We may update these terms and will identify the current version by
           its revision date.

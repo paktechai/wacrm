@@ -91,6 +91,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
           <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-5 text-xs text-slate-500 sm:px-8 md:flex-row md:items-center md:justify-between">
             <span>
               © {new Date().getUTCFullYear()} Wova8. All rights reserved.
+              <span className="ml-2">{WOVA8.legalDisclosure}</span>
             </span>
             <span className="inline-flex items-center gap-1.5">
               <ShieldCheck className="size-3.5" /> Tenant-isolated application

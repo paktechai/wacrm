@@ -21,6 +21,9 @@ describe('Wova8 brand and domain configuration', () => {
 
     expect(WOVA8.companyName).toBe('Wova8');
     expect(WOVA8.productName).toBe('Wova8 CRM');
+    expect(WOVA8.legalOperator).toBe('SM SERVICES');
+    expect(WOVA8.legalDisclosure).toBe('Wova8 is operated by SM SERVICES.');
+    expect(WOVA8.emails).toEqual({ support: 'support@wova8.com' });
     expect(WOVA8.companyUrl).toBe('https://wova8.com');
     expect(WOVA8.crmUrl).toBe('https://crm.wova8.com');
   });
