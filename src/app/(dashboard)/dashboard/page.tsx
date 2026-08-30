@@ -125,9 +125,10 @@ export default function DashboardPage() {
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('description')}
+        <h1 className="text-2xl font-bold text-foreground">Command Center</h1>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Live operational view across relationships, conversations,
+          opportunities, campaigns and automations.
         </p>
       </div>
 
@@ -144,14 +145,14 @@ export default function DashboardPage() {
               delta={{
                 sign: metrics.activeConversations.previous,
                 label: deltaLabel(
-                  metrics.activeConversations.previous, 
-                  t('newTodayVsYesterday'), 
+                  metrics.activeConversations.previous,
+                  t('newTodayVsYesterday'),
                   t('noChange', { suffix: t('newTodayVsYesterday') })
                 ),
               }}
             />
             <MetricCard
-              title={t('newContactsToday')}
+              title="New Relationships Today"
               value={metrics.newContactsToday.current.toLocaleString()}
               icon={UserPlus}
               delta={{
