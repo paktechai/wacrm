@@ -5,6 +5,7 @@ import type { AiConfig } from './types'
 const h = vi.hoisted(() => ({
   loadAiConfig: vi.fn(),
   buildConversationContext: vi.fn(),
+  buildRelationshipContext: vi.fn(),
   retrieveKnowledge: vi.fn(),
   generateReply: vi.fn(),
   engineSendText: vi.fn(),
@@ -19,6 +20,9 @@ const h = vi.hoisted(() => ({
 
 vi.mock('./config', () => ({ loadAiConfig: h.loadAiConfig }))
 vi.mock('./context', () => ({ buildConversationContext: h.buildConversationContext }))
+vi.mock('./relationship-context', () => ({
+  buildRelationshipContext: h.buildRelationshipContext,
+}))
 vi.mock('./knowledge', () => ({ retrieveKnowledge: h.retrieveKnowledge }))
 vi.mock('./generate', () => ({ generateReply: h.generateReply }))
 vi.mock('@/lib/flows/meta-send', () => ({ engineSendText: h.engineSendText }))
@@ -93,6 +97,7 @@ beforeEach(() => {
   h.state.rpcCalls = []
   h.loadAiConfig.mockResolvedValue(aiConfig())
   h.buildConversationContext.mockResolvedValue([{ role: 'user', content: 'hi' }])
+  h.buildRelationshipContext.mockResolvedValue(null)
   h.retrieveKnowledge.mockResolvedValue([])
   h.generateReply.mockResolvedValue({ text: 'Hello!', handoff: false })
   h.engineSendText.mockResolvedValue({ whatsapp_message_id: 'm1' })
@@ -118,6 +123,21 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     expect(h.retrieveKnowledge).toHaveBeenCalled()
     const systemPrompt = h.generateReply.mock.calls[0][0].systemPrompt as string
     expect(systemPrompt).toContain('Returns accepted within 30 days.')
+  })
+
+  it('grounds the reply in bounded relationship context', async () => {
+    h.buildRelationshipContext.mockResolvedValue(
+      'Name: Aisha\nRelationship tags: sponsor\nRelated opportunities / commitments:\n- Annual renewal (Renewal · open)',
+    )
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.buildRelationshipContext).toHaveBeenCalledWith(
+      expect.anything(),
+      'contact-1',
+    )
+    const systemPrompt = h.generateReply.mock.calls[0][0].systemPrompt as string
+    expect(systemPrompt).toContain('Name: Aisha')
+    expect(systemPrompt).toContain('Relationship tags: sponsor')
+    expect(systemPrompt).toContain('Do not expose internal notes')
   })
 
   it('stands down when an active message-level automation exists', async () => {

@@ -3,18 +3,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { cn } from "@/lib/utils";
 import type { Contact, Deal, ContactNote, Tag } from "@/types";
 import {
+  Activity,
   Phone,
   Mail,
   Copy,
   Check,
-  User,
   Tag as TagIcon,
   DollarSign,
   StickyNote,
   Plus,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -42,7 +42,6 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
 
     const supabase = createClient();
 
-    // Fetch deals, notes, and tags in parallel
     const [dealsRes, notesRes, tagsRes] = await Promise.all([
       supabase
         .from("deals")
@@ -73,8 +72,6 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
     }
   }, [contact]);
 
-  // Load on contact change. setContactData/setTags run inside async
-  // Supabase callbacks, not synchronously in the effect body.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchContactData();
@@ -85,14 +82,10 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
     await navigator.clipboard.writeText(contact.phone);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    // Dep is the whole `contact` object (not `contact?.phone`) so the
-    // React Compiler's inference agrees with the manual dep list —
-    // fixes the `preserve-manual-memoization` lint error.
   }, [contact]);
 
   const handleAddNote = useCallback(async () => {
-    if (!contact || !newNote.trim()) return;
-    if (!accountId) return;
+    if (!contact || !newNote.trim() || !accountId) return;
     setAddingNote(true);
 
     const supabase = createClient();
@@ -121,21 +114,63 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
 
   if (!contact) {
     return (
-      <div className="flex h-full w-70 items-center justify-center border-l border-border bg-card">
-        <p className="text-sm text-muted-foreground">{tThread("selectConversation")}</p>
+      <div className="flex h-full w-80 items-center justify-center border-l border-border bg-card">
+        <p className="text-sm text-muted-foreground">
+          {tThread("selectConversation")}
+        </p>
       </div>
     );
   }
 
   const displayName = contact.name || contact.phone;
   const initials = displayName.charAt(0).toUpperCase();
+  const activeDeals = deals.filter(
+    (deal) => deal.status !== "lost" && deal.status !== "won",
+  );
+
+  // This is intentionally a transparent CRM-context completeness signal,
+  // not a black-box model score. It tells an agent how much useful context
+  // Wova8 has before the next interaction.
+  const contextScore = Math.min(
+    100,
+    20 +
+      (contact.name ? 10 : 0) +
+      (contact.email ? 10 : 0) +
+      (contact.company ? 10 : 0) +
+      Math.min(tags.length * 5, 15) +
+      Math.min(notes.length * 5, 15) +
+      Math.min(activeDeals.length * 10, 20),
+  );
+
+  const relationshipType =
+    tags[0]?.name ?? (contact.company ? "Organization-linked" : "Unclassified");
+
+  const nextBestAction =
+    notes.length === 0
+      ? "Capture relationship context before the next follow-up."
+      : activeDeals.length > 0
+        ? "Review the active opportunity and recent notes before replying."
+        : tags.length === 0
+          ? "Classify this relationship so future automation can be more precise."
+          : "Continue the conversation using the saved relationship context.";
 
   return (
-    <div className="flex h-full w-70 flex-col border-l border-border bg-card">
+    <div className="flex h-full w-80 flex-col border-l border-border bg-card">
       <ScrollArea className="flex-1">
         <div className="p-4">
-          {/* Contact Info */}
-          <div className="flex flex-col items-center text-center">
+          <div className="mb-3 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                Relationship Intelligence
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Context for the current conversation
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center rounded-xl border border-border bg-background/40 p-4 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted text-lg font-semibold text-foreground">
               {contact.avatar_url ? (
                 <img
@@ -153,9 +188,51 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
             {contact.company && (
               <p className="text-xs text-muted-foreground">{contact.company}</p>
             )}
+            <span className="mt-2 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+              {relationshipType}
+            </span>
           </div>
 
-          {/* Phone */}
+          <div className="mt-3 rounded-xl border border-border bg-background/40 p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                <span className="text-xs font-medium text-foreground">
+                  Context strength
+                </span>
+              </div>
+              <span className="text-sm font-semibold tabular-nums text-foreground">
+                {contextScore}/100
+              </span>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${contextScore}%` }}
+              />
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <SignalStat label="Tags" value={tags.length} />
+              <SignalStat label="Notes" value={notes.length} />
+              <SignalStat label="Active" value={activeDeals.length} />
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+            <div className="flex items-center gap-2 text-xs font-medium text-primary">
+              <Sparkles className="h-3.5 w-3.5" />
+              Suggested next action
+            </div>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+              {nextBestAction}
+            </p>
+            <p className="mt-2 border-t border-primary/10 pt-2 text-[10px] leading-relaxed text-muted-foreground">
+              AI drafts and auto-replies can now use bounded identity, tags,
+              opportunities and recent notes as internal context. Internal CRM
+              labels are never meant to be exposed to the customer.
+            </p>
+          </div>
+
           <div className="mt-4 space-y-2">
             <button
               onClick={handleCopyPhone}
@@ -178,10 +255,8 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
             )}
           </div>
 
-          {/* Divider */}
           <div className="my-4 border-t border-border" />
 
-          {/* Tags */}
           <div>
             <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <TagIcon className="h-3 w-3" />
@@ -189,7 +264,9 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {tags.length === 0 ? (
-                <p className="px-1 text-xs text-muted-foreground">{tSidebar("noTags")}</p>
+                <p className="px-1 text-xs text-muted-foreground">
+                  {tSidebar("noTags")}
+                </p>
               ) : (
                 tags.map((tag) => (
                   <span
@@ -207,10 +284,8 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
             </div>
           </div>
 
-          {/* Divider */}
           <div className="my-4 border-t border-border" />
 
-          {/* Active Deals */}
           <div>
             <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <DollarSign className="h-3 w-3" />
@@ -218,13 +293,12 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
             </div>
             <div className="mt-2 space-y-2">
               {deals.length === 0 ? (
-                <p className="px-1 text-xs text-muted-foreground">{tSidebar("noDeals")}</p>
+                <p className="px-1 text-xs text-muted-foreground">
+                  {tSidebar("noDeals")}
+                </p>
               ) : (
                 deals.map((deal) => (
-                  <div
-                    key={deal.id}
-                    className="rounded-lg bg-muted px-3 py-2"
-                  >
+                  <div key={deal.id} className="rounded-lg bg-muted px-3 py-2">
                     <p className="text-sm font-medium text-foreground">
                       {deal.title}
                     </p>
@@ -251,10 +325,8 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
             </div>
           </div>
 
-          {/* Divider */}
           <div className="my-4 border-t border-border" />
 
-          {/* Notes */}
           <div>
             <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <StickyNote className="h-3 w-3" />
@@ -281,10 +353,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
 
               <div className="mt-2 space-y-2">
                 {notes.map((note) => (
-                  <div
-                    key={note.id}
-                    className="rounded-lg bg-muted px-3 py-2"
-                  >
+                  <div key={note.id} className="rounded-lg bg-muted px-3 py-2">
                     <p className="whitespace-pre-wrap text-xs text-muted-foreground">
                       {note.note_text}
                     </p>
@@ -298,6 +367,17 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
           </div>
         </div>
       </ScrollArea>
+    </div>
+  );
+}
+
+function SignalStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg bg-muted/70 px-2 py-2">
+      <p className="text-sm font-semibold tabular-nums text-foreground">{value}</p>
+      <p className="text-[9px] uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
     </div>
   );
 }

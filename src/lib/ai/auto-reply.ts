@@ -5,6 +5,7 @@ import { retrieveKnowledge } from './knowledge'
 import { generateReply } from './generate'
 import { buildSystemPrompt } from './defaults'
 import { buildHandoffSummary } from './handoff'
+import { buildRelationshipContext } from './relationship-context'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
 import { engineSendText } from '@/lib/flows/meta-send'
@@ -98,18 +99,24 @@ export async function dispatchInboundToAiReply(
       return
     }
 
-    // Ground the reply in the account's knowledge base (best-effort).
-    const knowledge = await retrieveKnowledge(
-      db,
-      accountId,
-      config,
-      latestUserMessage(messages),
-    )
+    // Ground the reply in both approved knowledge and bounded CRM
+    // relationship context. These reads are independent, so run them in
+    // parallel to avoid adding sequential latency to an automatic reply.
+    const [knowledge, relationshipContext] = await Promise.all([
+      retrieveKnowledge(
+        db,
+        accountId,
+        config,
+        latestUserMessage(messages),
+      ),
+      buildRelationshipContext(db, contactId),
+    ])
 
     const systemPrompt = buildSystemPrompt({
       userPrompt: config.systemPrompt,
       mode: 'auto_reply',
       knowledge,
+      relationshipContext,
     })
 
     const { text, handoff, usage } = await generateReply({

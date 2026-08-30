@@ -3,6 +3,7 @@ import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { loadAiConfig } from '@/lib/ai/config'
 import { buildConversationContext } from '@/lib/ai/context'
+import { buildRelationshipContext } from '@/lib/ai/relationship-context'
 import { retrieveKnowledge } from '@/lib/ai/knowledge'
 import { generateReply } from '@/lib/ai/generate'
 import { buildSystemPrompt } from '@/lib/ai/defaults'
@@ -44,10 +45,11 @@ export async function POST(request: Request) {
     }
 
     // RLS scopes the SSR client to the caller's account, so a missing
-    // row means "not yours / not found" either way.
+    // row means "not yours / not found" either way. We also retain the
+    // contact id so the model can receive bounded relationship context.
     const { data: conversation, error: convErr } = await supabase
       .from('conversations')
-      .select('id')
+      .select('id, contact_id')
       .eq('id', conversationId)
       .maybeSingle()
     if (convErr) {
@@ -89,19 +91,23 @@ export async function POST(request: Request) {
       )
     }
 
-    // Ground the draft in the account's knowledge base (best-effort —
-    // returns [] when there's no KB or retrieval fails).
-    const knowledge = await retrieveKnowledge(
-      supabase,
-      accountId,
-      config,
-      latestUserMessage(messages),
-    )
+    // Knowledge retrieval and CRM-context lookup are independent, so run
+    // them in parallel. Both are best-effort grounding layers.
+    const [knowledge, relationshipContext] = await Promise.all([
+      retrieveKnowledge(
+        supabase,
+        accountId,
+        config,
+        latestUserMessage(messages),
+      ),
+      buildRelationshipContext(supabase, conversation.contact_id),
+    ])
 
     const systemPrompt = buildSystemPrompt({
       userPrompt: config.systemPrompt,
       mode: 'draft',
       knowledge,
+      relationshipContext,
     })
 
     const { text, usage } = await generateReply({ config, systemPrompt, messages })

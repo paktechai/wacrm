@@ -20,9 +20,9 @@ import { getBroadcastStatus } from '@/lib/broadcast-status';
 import { useTranslations } from 'next-intl';
 
 /**
- * Poll cadence while any broadcast is sending. Kept modest so we don't
- * beat on Supabase — the aggregate trigger in migration 003 keeps
- * counts consistent; we just need to surface the freshest snapshot.
+ * Poll cadence while any campaign is sending. The database/API domain keeps
+ * the stable `broadcasts` name while Wova8 presents the capability as
+ * relationship-first Campaigns in the product UI.
  */
 const POLL_INTERVAL_MS = 5_000;
 
@@ -152,12 +152,12 @@ export default function BroadcastsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top indeterminate progress bar: only visible while a broadcast
+      {/* Top indeterminate progress bar: only visible while a campaign
           is mid-send. Pure CSS animation so no extra deps. */}
       {anySending && (
         <div
           role="progressbar"
-          aria-label="Broadcast in progress"
+          aria-label="Campaign in progress"
           className="broadcast-indeterminate fixed inset-x-0 top-0 z-40 h-0.5 overflow-hidden bg-muted"
         >
           <div className="broadcast-indeterminate-bar h-0.5 bg-primary" />
@@ -180,39 +180,41 @@ export default function BroadcastsPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('subtitle')}
+          <h1 className="text-2xl font-bold text-foreground">Campaigns</h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Plan and send approved, personalized outreach to the right
+            relationships while tracking delivery and engagement.
           </p>
         </div>
         <GatedButton
           canAct={canCreate}
-          gateReason="create broadcasts"
+          gateReason="create campaigns"
           onClick={() => router.push('/broadcasts/new')}
           className="bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
-          {t('newBroadcast')}
+          New Campaign
         </GatedButton>
       </div>
 
       {broadcasts.length === 0 ? (
         <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-border bg-card">
           <Radio className="mb-3 h-10 w-10 text-muted-foreground" />
-          <p className="text-sm font-medium text-foreground">{t('noBroadcastsYet')}</p>
+          <p className="text-sm font-medium text-foreground">No campaigns yet</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {t('createFirst')}
+            Create your first campaign to reach the right relationships at
+            scale.
           </p>
           <GatedButton
             canAct={canCreate}
-            gateReason="create broadcasts"
+            gateReason="create campaigns"
             onClick={() => router.push('/broadcasts/new')}
             className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
-            {t('newBroadcast')}
+            New Campaign
           </GatedButton>
         </div>
       ) : (
