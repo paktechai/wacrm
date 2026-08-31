@@ -18,6 +18,8 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sendingRef = useRef(false);
+  const requestIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -25,7 +27,11 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
 
   const send = async () => {
     const text = input.trim();
-    if (!text || sending) return;
+    if (!text || sendingRef.current) return;
+
+    sendingRef.current = true;
+    const requestId = requestIdRef.current ?? crypto.randomUUID();
+    requestIdRef.current = requestId;
 
     const next: Turn[] = [...turns, { role: 'user', content: text }];
     setTurns(next);
@@ -37,6 +43,7 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
         headers: { 'Content-Type': 'application/json' },
         // Send only role+content — the server ignores anything else.
         body: JSON.stringify({
+          requestId,
           messages: next.map((t) => ({ role: t.role, content: t.content })),
         }),
       });
@@ -63,11 +70,13 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
           handoff: Boolean(data.handoff),
         },
       ]);
+      requestIdRef.current = null;
     } catch {
       toast.error("Couldn't reach the agent.");
       setTurns(turns);
       setInput(text);
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
@@ -93,7 +102,10 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setTurns([])}
+          onClick={() => {
+            requestIdRef.current = null;
+            setTurns([]);
+          }}
           disabled={turns.length === 0 || sending}
           className="text-muted-foreground"
         >

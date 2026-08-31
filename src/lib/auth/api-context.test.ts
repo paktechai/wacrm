@@ -5,21 +5,24 @@ import type { ApiKeyRow } from "@/lib/api-keys/store";
 import { ApiError } from "@/lib/api/v1/respond";
 import { __resetRateLimitForTests, RATE_LIMITS } from "@/lib/rate-limit";
 
-// Mock the service-role client factory — requireApiKey only stashes
-// the returned client in the context; tests never call through it.
 vi.mock("@/lib/flows/admin-client", () => ({
   supabaseAdmin: () => ({ __isMockAdminClient: true }),
 }));
 
-// Mock the store so we control which row a hash resolves to.
 const findActiveKeyByHash = vi.fn<(hash: string) => Promise<ApiKeyRow | null>>();
 const touchLastUsed = vi.fn();
+const getApiAccessState = vi.fn();
 vi.mock("@/lib/api-keys/store", () => ({
   findActiveKeyByHash: (hash: string) => findActiveKeyByHash(hash),
   touchLastUsed: (id: string) => touchLastUsed(id),
+  getApiAccessState: (accountId: string) => getApiAccessState(accountId),
 }));
 
-// Import AFTER the mocks are registered.
+const incrementUsageBestEffort = vi.fn();
+vi.mock("@/lib/billing/metering", () => ({
+  incrementUsageBestEffort: (...args: unknown[]) => incrementUsageBestEffort(...args),
+}));
+
 const { requireApiKey } = await import("./api-context");
 
 const KEY = generateApiKey().plaintext;
@@ -47,6 +50,9 @@ beforeEach(() => {
   __resetRateLimitForTests();
   findActiveKeyByHash.mockReset();
   touchLastUsed.mockReset();
+  getApiAccessState.mockReset();
+  getApiAccessState.mockResolvedValue({ allowed: true });
+  incrementUsageBestEffort.mockReset();
 });
 
 afterEach(() => {
@@ -93,7 +99,13 @@ describe("requireApiKey", () => {
     expect(ctx.accountId).toBe("acct-1");
     expect(ctx.keyId).toBe("key-1");
     expect(ctx.scopes).toEqual(["messages:send"]);
+    expect(getApiAccessState).toHaveBeenCalledWith("acct-1");
     expect(touchLastUsed).toHaveBeenCalledWith("key-1");
+    expect(incrementUsageBestEffort).toHaveBeenCalledWith(
+      "acct-1",
+      "api_requests",
+      1,
+    );
   });
 
   it("accepts a bare key without the 'Bearer ' prefix", async () => {
@@ -109,6 +121,23 @@ describe("requireApiKey", () => {
       "forbidden",
       403,
     );
+    expect(getApiAccessState).not.toHaveBeenCalled();
+  });
+
+  it("403s when the workspace or plan blocks API access", async () => {
+    findActiveKeyByHash.mockResolvedValue(row());
+    getApiAccessState.mockResolvedValue({
+      allowed: false,
+      reason: "feature_disabled",
+    });
+
+    await expectApiError(
+      requireApiKey(reqWith(`Bearer ${KEY}`), "messages:send"),
+      "forbidden",
+      403,
+    );
+    expect(touchLastUsed).not.toHaveBeenCalled();
+    expect(incrementUsageBestEffort).not.toHaveBeenCalled();
   });
 
   it("passes when the key has the required scope", async () => {
@@ -119,7 +148,6 @@ describe("requireApiKey", () => {
 
   it("429s once the per-key budget is exhausted", async () => {
     findActiveKeyByHash.mockResolvedValue(row());
-    // Burn the whole window.
     for (let i = 0; i < RATE_LIMITS.publicApi.limit; i++) {
       await requireApiKey(reqWith(`Bearer ${KEY}`));
     }

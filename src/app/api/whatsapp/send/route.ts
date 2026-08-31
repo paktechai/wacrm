@@ -11,31 +11,30 @@ import {
   validateSendMessageParams,
   SendMessageError,
 } from '@/lib/whatsapp/send-message'
+import {
+  requireAccountService,
+  requireFeature,
+  requireUsageAvailable,
+} from '@/lib/billing/entitlements'
+import { WOVA8_FEATURES, WOVA8_METRICS } from '@/lib/billing/catalog'
+import { incrementUsageBestEffort } from '@/lib/billing/metering'
 
-// The dashboard's outbound-send endpoint. It owns auth, per-user rate
-// limiting, and the two ways the UI targets a thread — an existing
-// `conversation_id` (inbox) or a `contact_id` (Contact detail →
-// find-or-create the conversation). The actual Meta plumbing (validate
-// → send → persist → pause flows) lives in the shared
-// `sendMessageToConversation` core, which the public `/api/v1/messages`
-// endpoint reuses. This route is a thin adapter: resolve the
-// conversation, delegate, then map `SendMessageError` back onto the
-// dashboard's internal `{ error }` shape.
 export async function POST(request: Request) {
   try {
-    // Requires the 'agent' role, matching both `canSendMessages` and the
-    // `messages_modify` RLS policy (migration 017).
-    //
-    // Resolving `account_id` off the profile — which any 'viewer' has —
-    // was previously the only gate. RLS did block the message INSERT, but
-    // the send core calls Meta BEFORE it persists, so a viewer's request
-    // still delivered a real WhatsApp message to the customer and merely
-    // failed to record it (surfacing as "sent to Meta but failed to save
-    // to DB"). RLS can't un-send that, so the role check belongs here.
     const { supabase, accountId, userId } = await requireRole('agent')
 
-    // Per-user rate limit. Bucket key is scoped to this route so
-    // `/broadcast` has an independent budget.
+    // Enforce plan access before any Meta side effect. RLS protects the
+    // persistence step, but it cannot unsend a WhatsApp message once Meta
+    // accepted it, so entitlement + usage checks must happen here.
+    const entitlements = await requireAccountService(supabase, accountId)
+    requireFeature(entitlements, WOVA8_FEATURES.whatsappMessaging)
+    await requireUsageAvailable(
+      supabase,
+      entitlements,
+      WOVA8_METRICS.messagesSent,
+      1,
+    )
+
     const limit = checkRateLimit(`send:${userId}`, RATE_LIMITS.send)
     if (!limit.success) {
       return rateLimitResponse(limit)
@@ -43,9 +42,6 @@ export async function POST(request: Request) {
 
     const body = await request.json()
     const {
-      // `conversation_id` targets an existing thread (inbox). `contact_id`
-      // lets a caller initiate from a contact that may have no conversation
-      // yet (Contact detail → Send template) — we find-or-create one below.
       conversation_id: conversationIdInput,
       contact_id,
       message_type,
@@ -70,9 +66,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate the message shape up front — before the contact_id path
-    // finds-or-creates a conversation — so an invalid payload 400s
-    // without leaving an orphan empty conversation behind.
     try {
       validateSendMessageParams({
         messageType: message_type,
@@ -88,10 +81,6 @@ export async function POST(request: Request) {
       throw err
     }
 
-    // Resolve the target conversation. With `conversation_id` we load the
-    // existing thread; with `contact_id` we find-or-create one for the
-    // contact so a business-initiated template send (Contact detail view)
-    // reuses the shared send core below.
     let conversationId: string | null = null
 
     if (conversationIdInput) {
@@ -110,8 +99,6 @@ export async function POST(request: Request) {
       }
       conversationId = data.id
     } else {
-      // contact_id path: verify the contact is in this account first so a
-      // caller can't open a conversation against someone else's contact.
       const { data: contactRow, error: contactErr } = await supabase
         .from('contacts')
         .select('id')
@@ -148,10 +135,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Delegate to the shared send core (validates, sends to Meta with
-    // phone-variant retry, persists, pauses active flow runs). Its
-    // `SendMessageError` carries a machine code + HTTP status; the
-    // dashboard maps it to the internal `{ error }` shape.
     try {
       const result = await sendMessageToConversation(supabase, accountId, {
         conversationId,
@@ -166,6 +149,8 @@ export async function POST(request: Request) {
         interactivePayload: interactive_payload,
         replyToMessageId: reply_to_message_id,
       })
+
+      incrementUsageBestEffort(accountId, WOVA8_METRICS.messagesSent, 1)
 
       return NextResponse.json({
         success: true,
@@ -182,8 +167,6 @@ export async function POST(request: Request) {
       throw err
     }
   } catch (error) {
-    // requireRole throws Unauthorized/Forbidden; toErrorResponse maps
-    // those to 401/403 and collapses anything else to a generic 500.
     console.error('Error in WhatsApp send POST:', error)
     return toErrorResponse(error)
   }
@@ -191,13 +174,6 @@ export async function POST(request: Request) {
 
 type SendSupabase = Awaited<ReturnType<typeof createClient>>
 
-/**
- * Return the contact's conversation id in this account, creating one if
- * it doesn't exist yet. Mirrors the webhook's find-or-create so an
- * inbound-then-outbound (or outbound-first) sequence converges on a single
- * thread per contact. Runs under the caller's RLS — the conversations_insert
- * policy requires account agent membership, which the caller already is.
- */
 async function findOrCreateConversation(
   supabase: SendSupabase,
   accountId: string,

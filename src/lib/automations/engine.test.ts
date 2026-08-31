@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 // Shared mock state for the service-role client. Lives in a hoisted block
 // so the vi.mock factory below can close over it.
 const h = vi.hoisted(() => ({
+  addContactTagIfAbsent: vi.fn(async () => true),
   state: {
     owned: null as { id: string } | null,
     ownedCustomField: null as { id: string } | null,
@@ -45,7 +46,15 @@ vi.mock("./admin-client", () => {
       }
       return { data: null, error: null };
     }
-    if (table === "automations") return { data: state.automations, error: null };
+    if (table === "automations") {
+      const triggerType = ops.filters.find(
+        ([operator, column]) => operator === "eq" && column === "trigger_type",
+      )?.[2];
+      const rows = triggerType
+        ? state.automations.filter((row) => row.trigger_type === triggerType)
+        : state.automations;
+      return { data: rows, error: null };
+    }
     if (table === "automation_logs") {
       if (type === "insert") {
         state.logInserts.push(ops.payload as Record<string, unknown>);
@@ -104,12 +113,19 @@ vi.mock("./meta-send", () => ({
   engineSendInteractive: vi.fn(async () => ({ whatsapp_message_id: "m1" })),
 }));
 
+vi.mock("@/lib/contacts/tag-write", () => ({
+  addContactTagIfAbsent: h.addContactTagIfAbsent,
+  removeContactTag: vi.fn(async () => undefined),
+}));
+
 import { runAutomationsForTrigger, triggerMatches } from "./engine";
 import type { Automation, KeywordMatchTriggerConfig } from "@/types";
 
 const ACCOUNT = "acct-1";
 
 beforeEach(() => {
+  h.addContactTagIfAbsent.mockReset();
+  h.addContactTagIfAbsent.mockResolvedValue(true);
   h.state.owned = null;
   h.state.ownedCustomField = null;
   h.state.automations = [];
@@ -119,6 +135,60 @@ beforeEach(() => {
   h.state.upsertCalls = [];
   h.state.logInserts = [];
   h.state.logUpdates = [];
+});
+
+describe("first_inbound_message — welcome sequence", () => {
+  it("runs Send Message then Add Tag and records both successful steps", async () => {
+    h.state.owned = { id: "c1" };
+    h.state.automations = [{
+      id: "welcome-1",
+      account_id: ACCOUNT,
+      user_id: "u1",
+      name: "Welcome Message",
+      trigger_type: "first_inbound_message",
+      trigger_config: {},
+      is_active: true,
+    }];
+    h.state.steps = [
+      {
+        id: "send-1",
+        automation_id: "welcome-1",
+        step_type: "send_message",
+        position: 0,
+        parent_step_id: null,
+        step_config: { text: "Welcome!" },
+      },
+      {
+        id: "tag-1",
+        automation_id: "welcome-1",
+        step_type: "add_tag",
+        position: 1,
+        parent_step_id: null,
+        step_config: { tag_id: "new-lead" },
+      },
+    ];
+
+    await runAutomationsForTrigger({
+      accountId: ACCOUNT,
+      triggerType: "first_inbound_message",
+      contactId: "c1",
+      context: { conversation_id: "conv-1", message_text: "Hello" },
+    });
+
+    expect(h.addContactTagIfAbsent).toHaveBeenCalledTimes(1);
+    expect(h.addContactTagIfAbsent).toHaveBeenCalledWith(
+      expect.anything(),
+      { accountId: ACCOUNT, contactId: "c1", tagId: "new-lead" },
+    );
+    const terminalLog = h.state.logUpdates.at(-1);
+    expect(terminalLog).toMatchObject({
+      status: "success",
+      steps_executed: [
+        expect.objectContaining({ step_id: "send-1", status: "success" }),
+        expect.objectContaining({ step_id: "tag-1", status: "success" }),
+      ],
+    });
+  });
 });
 
 describe("runAutomationsForTrigger — tenant isolation", () => {

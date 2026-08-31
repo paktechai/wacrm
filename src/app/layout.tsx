@@ -1,11 +1,13 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata, Viewport } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
-import { Inter } from "next/font/google";
-import Script from "next/script";
-import "./globals.css";
-import { ThemeProvider } from "@/hooks/use-theme";
-import { ThemedToaster } from "@/components/themed-toaster";
+import { Inter } from 'next/font/google';
+import Script from 'next/script';
+import './globals.css';
+import { ThemeProvider } from '@/hooks/use-theme';
+import { ThemedToaster } from '@/components/themed-toaster';
+import { PwaRegister } from '@/components/pwa-register';
+import { WOVA8 } from '@/lib/brand';
 import {
   DEFAULT_MODE,
   DEFAULT_THEME,
@@ -13,25 +15,34 @@ import {
   MODES,
   STORAGE_KEY,
   THEME_IDS,
-} from "@/lib/themes";
+} from '@/lib/themes';
 
 const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
+  variable: '--font-sans',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(WOVA8.companyUrl),
+  applicationName: WOVA8.productName,
   title: {
-    default: "wacrm",
-    template: "%s — wacrm",
+    default: WOVA8.productName,
+    template: `%s — ${WOVA8.productName}`,
   },
-  description: "Self-hostable CRM template for WhatsApp.",
+  description: WOVA8.description,
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: WOVA8.productName,
+    statusBarStyle: 'black-translucent',
+  },
   robots: {
     index: false,
     follow: false,
   },
   icons: {
-    icon: [{ url: "/icon" }],
+    icon: [{ url: '/icon' }],
+    apple: [{ url: '/wova8-pwa-icon.svg' }],
   },
   formatDetection: {
     email: false,
@@ -41,8 +52,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#020617",
-  colorScheme: "dark light",
+  themeColor: '#07090d',
+  colorScheme: 'dark light',
 };
 
 // Inline boot script — runs before React hydrates so the user's
@@ -107,11 +118,12 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }}
         />
       </head>
-      <body className="min-h-full bg-background text-foreground font-sans">
+      <body className="bg-background text-foreground min-h-full font-sans">
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ThemeProvider>
             {children}
             <ThemedToaster />
+            <PwaRegister />
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>
