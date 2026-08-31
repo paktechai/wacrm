@@ -1,9 +1,36 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   getSubscribedApps,
+  isMetaAppSubscribed,
   registerPhoneNumber,
   subscribeWabaToApp,
 } from './meta-api';
+
+describe('isMetaAppSubscribed', () => {
+  it('matches the expected Meta app instead of accepting any existing app', () => {
+    expect(
+      isMetaAppSubscribed(
+        [{ whatsapp_business_api_data: { id: 'OLD_APP' } }],
+        'SBYT_APP',
+      ),
+    ).toBe(false);
+
+    expect(
+      isMetaAppSubscribed(
+        [
+          { whatsapp_business_api_data: { id: 'OLD_APP' } },
+          { whatsapp_business_api_data: { id: 'SBYT_APP' } },
+        ],
+        'SBYT_APP',
+      ),
+    ).toBe(true);
+  });
+
+  it('accepts top-level app IDs and rejects a missing expected app ID', () => {
+    expect(isMetaAppSubscribed([{ id: 'SBYT_APP' }], ' SBYT_APP ')).toBe(true);
+    expect(isMetaAppSubscribed([{ id: 'SBYT_APP' }], '  ')).toBe(false);
+  });
+});
 
 function okResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {

@@ -1,19 +1,10 @@
 // ============================================================
-// API key store — the *auth-path* data access for public API keys.
-//
-// Only the read side lives here, and deliberately so: it runs with
-// the service-role client because a public-API caller has no Supabase
-// session, so RLS (which keys off `auth.uid()`) can't scope the
-// lookup. The management side (list / create / revoke) runs in the
-// dashboard under a real cookie session and goes through the RLS
-// client *inline* in the route handlers — same pattern as
-// `/api/account/invitations`. Keeping the RLS-bypassing surface tiny
-// and read-only here makes it easy to audit.
+// API key store — auth-path data access for public API keys.
+// Service-role access is deliberately contained in this module.
 // ============================================================
 
 import { supabaseAdmin } from '@/lib/flows/admin-client';
 
-/** Shape of an `api_keys` row as the auth path consumes it. */
 export interface ApiKeyRow {
   id: string;
   account_id: string;
@@ -24,13 +15,13 @@ export interface ApiKeyRow {
   revoked_at: string | null;
 }
 
-/**
- * Look up an *active* key by its SHA-256 hash. Returns null if no
- * row matches, or if the matching row is revoked or expired — so
- * callers never have to re-check liveness. Uses the service-role
- * client (RLS-bypassing); the hash is the only credential, so this
- * is the moment that establishes the caller's account.
- */
+export interface ApiAccessState {
+  allowed: boolean;
+  reason?: 'workspace_inactive' | 'subscription_inactive' | 'feature_disabled' | 'limit_reached';
+  current?: number;
+  limit?: number;
+}
+
 export async function findActiveKeyByHash(
   hash: string
 ): Promise<ApiKeyRow | null> {
@@ -46,8 +37,6 @@ export async function findActiveKeyByHash(
   }
   if (!data) return null;
 
-  // Liveness checks in JS rather than SQL so the failure modes are
-  // explicit and the index stays a simple equality lookup.
   if (data.revoked_at) return null;
   if (data.expires_at && new Date(data.expires_at).getTime() <= Date.now()) {
     return null;
@@ -57,10 +46,105 @@ export async function findActiveKeyByHash(
 }
 
 /**
- * Fetch the account name for a resolved key, so `/api/v1/me` and any
- * future endpoint can echo it without a second round trip in the
- * route. Service-role; the key already proved account membership.
+ * Resolve workspace lifecycle, subscription, API entitlement and monthly API
+ * quota for a machine-to-machine caller. Public API calls run through a
+ * service-role client, so this explicit guard is the SaaS boundary that RLS
+ * cannot provide on its own.
  */
+export async function getApiAccessState(accountId: string): Promise<ApiAccessState> {
+  const db = supabaseAdmin();
+
+  const [{ data: account, error: accountError }, { data: subscription, error: subError }] =
+    await Promise.all([
+      db
+        .from('accounts')
+        .select('lifecycle_status')
+        .eq('id', accountId)
+        .maybeSingle(),
+      db
+        .from('account_subscriptions')
+        .select('plan_id, status')
+        .eq('account_id', accountId)
+        .maybeSingle(),
+    ]);
+
+  if (accountError || subError) {
+    console.error('[api-keys/store] SaaS access lookup failed', {
+      accountError,
+      subError,
+    });
+    return { allowed: false, reason: 'workspace_inactive' };
+  }
+
+  if (
+    account?.lifecycle_status === 'suspended' ||
+    account?.lifecycle_status === 'cancelled'
+  ) {
+    return { allowed: false, reason: 'workspace_inactive' };
+  }
+
+  // Backwards compatibility for installations that have not introduced
+  // subscriptions yet. Production migration 041 guarantees a row.
+  if (!subscription) return { allowed: true };
+
+  if (subscription.status === 'paused' || subscription.status === 'cancelled') {
+    return { allowed: false, reason: 'subscription_inactive' };
+  }
+
+  if (!subscription.plan_id) {
+    return { allowed: false, reason: 'feature_disabled' };
+  }
+
+  const { data: plan, error: planError } = await db
+    .from('saas_plans')
+    .select('features, limits, is_active')
+    .eq('id', subscription.plan_id)
+    .maybeSingle();
+
+  if (planError || !plan || plan.is_active !== true) {
+    return { allowed: false, reason: 'feature_disabled' };
+  }
+
+  const features =
+    plan.features && typeof plan.features === 'object' && !Array.isArray(plan.features)
+      ? (plan.features as Record<string, unknown>)
+      : {};
+  if (features.api !== true) {
+    return { allowed: false, reason: 'feature_disabled' };
+  }
+
+  const limits =
+    plan.limits && typeof plan.limits === 'object' && !Array.isArray(plan.limits)
+      ? (plan.limits as Record<string, unknown>)
+      : {};
+  const apiLimit = limits.api_requests;
+  if (typeof apiLimit !== 'number' || !Number.isFinite(apiLimit) || apiLimit < 0) {
+    return { allowed: true };
+  }
+
+  const now = new Date();
+  const periodStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`;
+  const { data: usage, error: usageError } = await db
+    .from('account_usage_monthly')
+    .select('quantity')
+    .eq('account_id', accountId)
+    .eq('period_start', periodStart)
+    .eq('metric', 'api_requests')
+    .maybeSingle();
+
+  if (usageError) {
+    console.error('[api-keys/store] API usage lookup failed:', usageError.message);
+    return { allowed: false, reason: 'limit_reached' };
+  }
+
+  const current = Number(usage?.quantity ?? 0);
+  if (current + 1 > apiLimit) {
+    return { allowed: false, reason: 'limit_reached', current, limit: apiLimit };
+  }
+
+  return { allowed: true, current, limit: apiLimit };
+}
+
 export async function getAccountName(
   accountId: string
 ): Promise<string | null> {
@@ -73,11 +157,6 @@ export async function getAccountName(
   return (data.name as string) ?? null;
 }
 
-/**
- * Best-effort `last_used_at` bump. Fire-and-forget from the auth
- * path — a failed update just means the "last used" column lags;
- * it must never fail the request the caller is actually making.
- */
 export function touchLastUsed(id: string): void {
   void supabaseAdmin()
     .from('api_keys')

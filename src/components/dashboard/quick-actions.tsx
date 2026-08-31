@@ -4,6 +4,12 @@ import Link from 'next/link'
 import { UserPlus, Briefcase, Radio, Zap } from 'lucide-react'
 import type { ComponentType } from 'react'
 
+import { useAuth } from '@/hooks/use-auth'
+import { canAccessWorkspaceRoute } from '@/lib/auth/roles'
+
+// Quick-action shortcuts. Each navigates to the page that owns the
+// relevant "create" flow. We deliberately don't try to auto-open any
+// modal on the target page — that'd require touching those pages.
 interface Action {
   label: string
   href: string
@@ -22,9 +28,16 @@ const ACTIONS: Action[] = [
 ]
 
 export function QuickActions() {
+  const { accountRole, canSendMessages } = useAuth()
+  const visibleActions = accountRole && canSendMessages
+    ? ACTIONS.filter((action) => canAccessWorkspaceRoute(accountRole, action.href))
+    : []
+
+  if (visibleActions.length === 0) return null
+
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {ACTIONS.map((a) => {
+      {visibleActions.map((a) => {
         const Icon = a.icon
         return (
           <Link

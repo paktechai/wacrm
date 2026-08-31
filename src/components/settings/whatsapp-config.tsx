@@ -161,9 +161,20 @@ export function WhatsAppConfig() {
           const payload = await res.json();
 
           if (payload.connected) {
-            setConnectionStatus('connected');
             setResetReason(null);
-            setStatusMessage('');
+            try {
+              const probeResponse = await fetch(
+                '/api/whatsapp/config/verify-registration',
+                { method: 'GET', cache: 'no-store' },
+              );
+              const probe = (await probeResponse.json()) as RegistrationProbe;
+              setRegistrationProbe(probe);
+              setConnectionStatus(probe.live ? 'connected' : 'disconnected');
+              setStatusMessage(probe.live ? '' : probe.errors?.[0] || 'Incoming WhatsApp messages are not ready yet.');
+            } catch {
+              setConnectionStatus('disconnected');
+              setStatusMessage('Could not verify the incoming-message connection.');
+            }
           } else {
             setConnectionStatus('disconnected');
             setResetReason(payload.needs_reset ? 'token_corrupted' : payload.reason === 'meta_api_error' ? 'meta_api_error' : null);
@@ -255,14 +266,6 @@ export function WhatsAppConfig() {
 
       if (tokenEdited && accessToken !== MASKED_TOKEN && accessToken.trim()) {
         payload.access_token = accessToken.trim();
-      } else if (config) {
-        // Existing config — reuse stored encrypted token by decrypting on the
-        // server. But our POST handler requires an access_token to verify
-        // with Meta. If the user didn't change the token, we need to signal
-        // that. Simplest: require token re-entry if they're updating.
-        toast.error('Please re-enter the Access Token to save changes');
-        setSaving(false);
-        return;
       }
 
       const res = await fetch('/api/whatsapp/config', {
@@ -285,9 +288,9 @@ export function WhatsAppConfig() {
       //                         failed; UI shows the specific error
       //                         and a retry path. registration_error
       //                         is human-readable from Meta.
-      if (data.registered === false && data.registration_error) {
+      if (data.registration_error) {
         toast.error(
-          `Saved, but Meta couldn't register the number: ${data.registration_error}`,
+          `Saved, but incoming messages are not ready: ${data.registration_error}`,
           { duration: 12000 },
         );
       } else if (data.registration_skipped) {
@@ -360,6 +363,8 @@ export function WhatsAppConfig() {
       });
       const data = (await res.json()) as RegistrationProbe;
       setRegistrationProbe(data);
+      setConnectionStatus(data.live ? 'connected' : 'disconnected');
+      setStatusMessage(data.live ? '' : data.errors?.[0] || 'Incoming WhatsApp messages are not ready yet.');
       if (data.live) {
         toast.success('Number is fully wired — Meta is delivering events.');
       } else {
@@ -368,7 +373,6 @@ export function WhatsAppConfig() {
           { duration: 8000 },
         );
       }
-      if (accountId) await fetchConfig(accountId);
     } catch (err) {
       console.error('verify-registration failed:', err);
       toast.error('Could not reach the verification endpoint.');

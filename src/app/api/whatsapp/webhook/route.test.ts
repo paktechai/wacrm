@@ -10,7 +10,7 @@ const h = vi.hoisted(() => ({
     // Result the message upsert's .select() resolves to. A genuine insert
     // returns the row; a replayed delivery conflicts and returns [].
     messageUpsertResult: [{ id: 'msg-1' }] as { id: string }[],
-    priorCustomerMsgCount: 0,
+    firstInboundClaimed: true,
     /** Row `lookupInternalIdByMetaId` resolves for a `context.id`. */
     replyContextParent: null as { id: string } | null,
     conversation: { id: 'conv-1', unread_count: 0, account_id: 'acc-1' },
@@ -97,33 +97,18 @@ vi.mock('@supabase/supabase-js', () => ({
           }
         case 'messages':
           return {
-            // Two different chains land here, told apart by the count
-            // option: the prior-message count (head request) and the
-            // reply-context parent lookup.
-            select: (_columns: string, options?: { head?: boolean }) =>
-              options?.head
-                ? // priorCustomerMsgCount: select('id',{count,head}).eq().eq()
-                  {
-                    eq: () => ({
-                      eq: () =>
-                        Promise.resolve({
-                          count: h.state.priorCustomerMsgCount,
-                          error: null,
-                        }),
+            // lookupInternalIdByMetaId: select('id').eq().eq().maybeSingle()
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: () =>
+                    Promise.resolve({
+                      data: h.state.replyContextParent,
+                      error: null,
                     }),
-                  }
-                : // lookupInternalIdByMetaId: select('id').eq().eq().maybeSingle()
-                  {
-                    eq: () => ({
-                      eq: () => ({
-                        maybeSingle: () =>
-                          Promise.resolve({
-                            data: h.state.replyContextParent,
-                            error: null,
-                          }),
-                      }),
-                    }),
-                  },
+                }),
+              }),
+            }),
             // Idempotent insert: upsert(...).select('id')
             upsert: (row: Record<string, unknown>, options: unknown) => {
               h.state.upsertCalls.push({ row, options })
@@ -142,7 +127,13 @@ vi.mock('@supabase/supabase-js', () => ({
     },
     rpc: (name: string, args: Record<string, unknown>) => {
       h.state.rpcCalls.push({ name, args })
-      return Promise.resolve({ data: null, error: null })
+      return Promise.resolve({
+        data:
+          name === 'claim_contact_first_inbound_message'
+            ? h.state.firstInboundClaimed
+            : null,
+        error: null,
+      })
     },
     // Service-role Storage, used by the inbound-media mirror (#466).
     storage: {
@@ -249,7 +240,7 @@ async function runWebhook(message?: Record<string, unknown>) {
 beforeEach(() => {
   vi.clearAllMocks()
   h.state.messageUpsertResult = [{ id: 'msg-1' }]
-  h.state.priorCustomerMsgCount = 0
+  h.state.firstInboundClaimed = true
   h.state.replyContextParent = null
   h.state.conversation = { id: 'conv-1', unread_count: 0, account_id: 'acc-1' }
   h.state.upsertCalls = []
@@ -295,7 +286,7 @@ describe('inbound webhook: idempotent insert (#367)', () => {
       ignoreDuplicates: true,
     })
     // Downstream side effects ran exactly once.
-    expect(h.state.rpcCalls).toHaveLength(1)
+    expect(h.state.rpcCalls).toHaveLength(2)
     expect(h.dispatchInboundToFlows).toHaveBeenCalledTimes(1)
     expect(h.dispatchWebhookEvent).toHaveBeenCalledTimes(1)
   })
@@ -316,15 +307,45 @@ describe('inbound webhook: idempotent insert (#367)', () => {
   })
 })
 
+describe('inbound webhook: first message automation', () => {
+  it('dispatches first_inbound_message exactly once for a fresh conversation', async () => {
+    h.state.firstInboundClaimed = true
+
+    await runWebhook()
+
+    const firstMessageCalls = h.runAutomationsForTrigger.mock.calls.filter(
+      ([input]) =>
+        (input as { triggerType: string }).triggerType === 'first_inbound_message',
+    )
+    expect(firstMessageCalls).toHaveLength(1)
+    expect(firstMessageCalls[0][0]).toMatchObject({
+      accountId: 'acc-1',
+      contactId: 'contact-1',
+      context: { conversation_id: 'conv-1', message_text: 'hello' },
+    })
+  })
+
+  it('does not dispatch first_inbound_message for a subsequent message', async () => {
+    h.state.firstInboundClaimed = false
+
+    await runWebhook()
+
+    const triggerTypes = h.runAutomationsForTrigger.mock.calls.map(
+      ([input]) => (input as { triggerType: string }).triggerType,
+    )
+    expect(triggerTypes).not.toContain('first_inbound_message')
+    expect(triggerTypes).toContain('new_message_received')
+  })
+})
+
 describe('inbound webhook: atomic unread bump (#369)', () => {
   it('increments unread through the DB-side RPC, not a read-modify-write', async () => {
     await runWebhook()
 
-    expect(h.state.rpcCalls).toHaveLength(1)
-    expect(h.state.rpcCalls[0]).toMatchObject({
+    expect(h.state.rpcCalls).toContainEqual(expect.objectContaining({
       name: 'bump_conversation_on_inbound',
-      args: { p_conversation_id: 'conv-1' },
-    })
+      args: expect.objectContaining({ p_conversation_id: 'conv-1' }),
+    }))
   })
 })
 

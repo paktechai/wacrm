@@ -30,6 +30,7 @@ import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/hooks/use-auth";
 import { GatedButton } from "@/components/ui/gated-button";
 import { useTranslations } from "next-intl";
+import { createDealStageTransition } from "@/lib/pipeline-deals";
 
 // Pipeline creation is admin-class (settings-tier write under
 // the new RLS); deal creation is operational and only requires
@@ -216,20 +217,25 @@ export default function PipelinesPage() {
 
   const handleDealMoved = useCallback(
     async (dealId: string, newStageId: string) => {
+      const targetStage = stages.find((stage) => stage.id === newStageId);
+      if (!targetStage) return;
+      const transition = createDealStageTransition(targetStage);
       // Optimistic update — board already animated; just persist.
       setDeals((prev) =>
-        prev.map((d) => (d.id === dealId ? { ...d, stage_id: newStageId } : d)),
+        prev.map((deal) =>
+          deal.id === dealId ? { ...deal, ...transition } : deal,
+        ),
       );
       const { error } = await supabase
         .from("deals")
-        .update({ stage_id: newStageId })
+        .update(transition)
         .eq("id", dealId);
       if (error) {
         toast.error(t("toastFailedMoveDeal"));
         refreshDeals();
       }
     },
-    [supabase, refreshDeals, t],
+    [supabase, refreshDeals, stages, t],
   );
 
   const handleAddDeal = useCallback(

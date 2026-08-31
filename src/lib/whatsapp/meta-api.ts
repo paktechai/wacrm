@@ -184,11 +184,27 @@ export interface GetSubscribedAppsArgs {
 }
 
 export interface SubscribedApp {
+  id?: string
   whatsapp_business_api_data?: {
     id?: string
     name?: string
     link?: string
   }
+}
+
+/** A different/legacy Meta app on the same WABA must never count as ours. */
+export function isMetaAppSubscribed(
+  apps: SubscribedApp[],
+  appId: string,
+): boolean {
+  const expectedAppId = appId.trim()
+  if (!expectedAppId) return false
+
+  return apps.some((app) =>
+    [app.id, app.whatsapp_business_api_data?.id].some(
+      (subscribedAppId) => subscribedAppId?.trim() === expectedAppId,
+    ),
+  )
 }
 
 /**
