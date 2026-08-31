@@ -38,12 +38,12 @@ describe('Wova8 brand and domain configuration', () => {
     expect(WOVA8.crmUrl).toBe('https://staging-crm.wova8.com');
   });
 
-  it('recognizes the new and legacy CRM hosts during migration', async () => {
+  it('recognizes only the configured canonical CRM host', async () => {
     delete process.env.NEXT_PUBLIC_SITE_URL;
     const { isCrmHostname } = await import('./brand');
 
     expect(isCrmHostname('crm.wova8.com')).toBe(true);
-    expect(isCrmHostname('crm.sbyt.app:443')).toBe(true);
+    expect(isCrmHostname('crm.sbyt.app:443')).toBe(false);
     expect(isCrmHostname('wova8.com')).toBe(false);
   });
 });

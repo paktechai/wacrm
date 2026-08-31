@@ -41,12 +41,12 @@ The public site contains no fabricated metrics, customers, testimonials, reviews
 
 ## C. CRM prepared
 
-- Root routing is host-aware: `crm.wova8.com` and `crm.sbyt.app` redirect to the existing protected dashboard; `wova8.com` renders the company home.
+- Root routing is host-aware: `crm.wova8.com` redirects to the existing protected dashboard; `wova8.com` renders the company home. The retired `crm.sbyt.app` host is no longer trusted as an application origin.
 - Public company/legal pages bypass the Supabase auth round trip, while every workspace route keeps existing authentication and role enforcement.
 - Invitation links use the validated canonical CRM origin rather than reflected Host headers.
-- Auth callbacks preserve recognized new or legacy CRM proxy hosts and fall back to the configured canonical CRM origin.
+- Auth callbacks preserve the recognized Wova8 CRM proxy host and fall back to the configured canonical CRM origin for every other host.
 - Provider/model/API-key behavior, Meta credentials, WhatsApp credentials, encryption, tenant isolation, RLS, and permissions are unchanged.
-- Legacy sessions remain valid on `crm.sbyt.app`. Browser security correctly requires a separate login cookie on `crm.wova8.com`; cookie scope was not weakened.
+- Browser sessions remain host-scoped to `crm.wova8.com`; cookie scope was not weakened.
 
 ## D. Domain migration prepared
 
@@ -55,7 +55,7 @@ The exact procedure is in `docs/WOVA8_CUTOVER_RUNBOOK.md`. Required application 
 ```dotenv
 NEXT_PUBLIC_COMPANY_URL=https://wova8.com
 NEXT_PUBLIC_SITE_URL=https://crm.wova8.com
-ALLOWED_INVITE_HOSTS=crm.wova8.com,crm.sbyt.app
+ALLOWED_INVITE_HOSTS=crm.wova8.com
 ```
 
 Set `NEXT_PUBLIC_*` before `npm run build`; restarting an already-built Next.js bundle is insufficient. Prefer `WOVA8_SUPER_ADMIN_EMAILS`, with the deployed legacy variable retained as a fallback during migration.
@@ -77,13 +77,13 @@ The VPS IP is not available through the connector in this session and is deliber
 
 - Deploy the approved commit from the configured SSH Git remote into a separate release directory.
 - Build with Wova8 environment, start on a candidate port, then add proxy server names for `wova8.com`, `www.wova8.com`, and `crm.wova8.com`.
-- Preserve the `crm.sbyt.app` server block, TLS, old release, and DNS for rollback.
+- Retire the `crm.sbyt.app` server block, TLS mapping, DNS record, and Supabase redirect after the Wova8 production checks pass.
 - Forward Host/proto/forwarded headers, preserve `private, no-store` and RSC-aware `Vary`, and issue valid TLS for all new hosts.
 
 ### Supabase
 
 - Add `https://crm.wova8.com/auth/callback` to Additional Redirect URLs.
-- Retain `https://crm.sbyt.app/auth/callback` during rollback coverage.
+- Remove `https://crm.sbyt.app/**` from Additional Redirect URLs; rollback remains commit-based on `crm.wova8.com`.
 - After the new origin is healthy, set Site URL to `https://crm.wova8.com`.
 - Do not alter users, identities, RLS, database objects, JWT settings, keys, or tenant data.
 
@@ -117,7 +117,7 @@ Every remaining reference is intentional:
 
 - Supabase migrations 040–054 and `docs/SBYT_CRM_FINAL_CHECKLIST.md`: immutable migration history and dated production evidence.
 - The old-brand account name was classified as tenant-visible workspace metadata and renamed to `Wova8 Platform` after explicit approval. The historical `SBYT Foundation` system-plan name remains untouched as migration/billing compatibility data.
-- `crm.sbyt.app`: legacy/rollback origin in centralized config, tests, environment example, audit, and runbook.
+- `crm.sbyt.app`: retained only in dated migration evidence and retirement documentation, not as an accepted runtime origin.
 - `SBYT_SUPER_ADMIN_EMAILS`: temporary fallback preventing platform-admin lockout.
 - `SBYT_FEATURES`, `SBYT_METRICS`, and legacy types: deprecated source-compatibility aliases.
 - `sbyt-crm-export-v1`: stable machine schema ID; visible filename is Wova8.
@@ -143,7 +143,7 @@ Repository and rendered-source searches found no “Made/Generated/Built with AI
 
 ## K. Rollback plan
 
-Keep the known-good commit/process, `crm.sbyt.app` DNS/proxy/TLS, old environment backup, old Supabase callback, and prior Meta values. On a failed cutover: direct traffic back to the captured old records/process, restore `NEXT_PUBLIC_SITE_URL=https://crm.sbyt.app` and rebuild/deploy the known-good commit, reset Supabase Site URL while temporarily retaining both callbacks, restore any changed Meta callback values, and re-run login/session/webhook/messaging/AI checks. No database restore is required because this preparation performs no schema or tenant-data migration.
+Keep four known-good Git commits and the protected Wova8 environment/proxy backup. On a failed release, deploy one of those commits on `crm.wova8.com`, keep `NEXT_PUBLIC_SITE_URL=https://crm.wova8.com`, and re-run login/session/webhook/messaging/AI checks. No database restore is required for a code rollback.
 
 ## Approval gate
 
