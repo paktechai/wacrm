@@ -25,7 +25,6 @@ export const WOVA8 = Object.freeze({
     DEFAULT_COMPANY_URL
   ),
   crmUrl: canonicalUrl(process.env.NEXT_PUBLIC_SITE_URL, DEFAULT_CRM_URL),
-  legacyCrmUrl: 'https://crm.sbyt.app',
   emails: Object.freeze({
     support: 'support@wova8.com',
   }),
@@ -62,7 +61,7 @@ export function normalizeHostname(value: string | null | undefined): string {
 export function crmHostnames(): readonly string[] {
   return Array.from(
     new Set(
-      [WOVA8.crmUrl, WOVA8.legacyCrmUrl]
+      [WOVA8.crmUrl]
         .map(hostnameOf)
         .filter((host): host is string => Boolean(host))
     )
