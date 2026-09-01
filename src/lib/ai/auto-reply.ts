@@ -6,6 +6,7 @@ import { generateReply } from './generate'
 import { buildSystemPrompt } from './defaults'
 import { buildHandoffSummary } from './handoff'
 import { buildRelationshipContext } from './relationship-context'
+import { recordAiDecisionTrace } from './decision-trace'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
 import {
@@ -135,9 +136,11 @@ export async function dispatchInboundToAiReply(
       plannedActions = []
     }
 
+    const requestId = crypto.randomUUID()
+
     // Provider usage happened even when the model requests a handoff.
     await logAiUsage(db, {
-      requestId: crypto.randomUUID(),
+      requestId,
       accountId,
       conversationId,
       mode: 'auto_reply',
@@ -163,6 +166,29 @@ export async function dispatchInboundToAiReply(
         .update(update)
         .eq('id', conversationId)
         .eq('account_id', accountId)
+
+      await recordAiDecisionTrace(db, {
+        accountId,
+        contactId,
+        conversationId,
+        operation: 'auto_reply',
+        outcome: 'human_handoff',
+        decisionSummary:
+          'AI did not send a customer reply and handed the conversation to a human path. Auto-reply was disabled for the conversation to preserve human ownership.',
+        conversationContextUsed: true,
+        relationshipContextUsed: Boolean(relationshipContext),
+        approvedKnowledgeUsed: knowledge.length > 0,
+        policyChecks: [
+          { name: 'deterministic_automation_precedence', result: 'pass' },
+          { name: 'human_assignment_precedence', result: 'pass' },
+          { name: 'per_conversation_reply_cap', result: 'pass' },
+          { name: 'human_handoff_on_uncertainty', result: 'pass' },
+        ],
+        modelProvider: config.provider,
+        modelName: config.model,
+        correlationId: requestId,
+        createdBy: configOwnerUserId,
+      })
 
       if (agentId) {
         await db.from('ai_copilot_events').insert({
@@ -225,6 +251,31 @@ export async function dispatchInboundToAiReply(
         metadata: { handoff: false, actions_executed: actionsExecuted },
       })
     }
+
+    await recordAiDecisionTrace(db, {
+      accountId,
+      contactId,
+      conversationId,
+      operation: 'auto_reply',
+      outcome: 'reply_sent',
+      decisionSummary:
+        actionsExecuted.length > 0
+          ? `AI sent one claimed reply and then executed approved CRM actions: ${actionsExecuted.join(', ')}.`
+          : 'AI sent one reply after deterministic automation, human ownership, rate-limit and atomic reply-slot gates passed.',
+      conversationContextUsed: true,
+      relationshipContextUsed: Boolean(relationshipContext),
+      approvedKnowledgeUsed: knowledge.length > 0,
+      policyChecks: [
+        { name: 'deterministic_automation_precedence', result: 'pass' },
+        { name: 'human_assignment_precedence', result: 'pass' },
+        { name: 'per_conversation_reply_cap', result: 'pass' },
+        { name: 'atomic_reply_slot', result: 'pass' },
+      ],
+      modelProvider: config.provider,
+      modelName: config.model,
+      correlationId: requestId,
+      createdBy: configOwnerUserId,
+    })
 
     incrementUsageBestEffort(accountId, WOVA8_METRICS.messagesSent, 1)
   } catch (err) {
