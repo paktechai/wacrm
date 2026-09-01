@@ -16,7 +16,7 @@ export function BrandMark({
       <span
         aria-hidden
         className={cn(
-          'grid shrink-0 place-items-center rounded-[0.7rem] bg-gradient-to-br from-violet-400 via-violet-600 to-cyan-400 shadow-sm shadow-violet-500/20',
+          'grid shrink-0 place-items-center rounded-[0.7rem] bg-gradient-to-br from-emerald-400 via-primary to-emerald-700 shadow-sm shadow-primary/20',
           compact ? 'size-8' : 'size-10'
         )}
       >
@@ -41,7 +41,7 @@ export function BrandMark({
           inverted ? 'text-white' : 'text-foreground'
         )}
       >
-        Wova<span className="text-violet-400">8</span>
+        Wova<span className="text-primary">8</span>
       </span>
     </span>
   );

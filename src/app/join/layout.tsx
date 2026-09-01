@@ -1,5 +1,5 @@
 // ============================================================
-// /join/[token] layout — minimal full-bleed dark shell.
+// /join/[token] layout — minimal full-bleed Wova8 shell.
 //
 // The route group sits outside both `(auth)` and `(dashboard)`
 // because it's hybrid: the page must render for anonymous
@@ -11,7 +11,7 @@
 // avoids both.
 //
 // Styling matches the login / signup pages — centered card on a
-// slate-950 background — so the join experience feels like a
+// green-tinted background — so the join experience feels like a
 // natural step in the auth funnel rather than a foreign page.
 //
 // Referrer-Policy: no-referrer
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 
 export default function JoinLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="wova8-auth-screen flex min-h-screen items-center justify-center px-4 py-8">
       {children}
     </div>
   );

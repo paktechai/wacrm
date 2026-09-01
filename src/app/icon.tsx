@@ -13,8 +13,7 @@ export default function Icon() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background:
-          'linear-gradient(135deg,#a78bfa 0%,#6d5dfc 58%,#22d3ee 100%)',
+        background: 'linear-gradient(135deg,#35c982 0%,#168a58 65%,#0f6d48 100%)',
         borderRadius: 8,
       }}
     >

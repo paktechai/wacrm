@@ -536,7 +536,7 @@ export function MessageComposer({
   // ---- Render --------------------------------------------------------
 
   return (
-    <div className="border-t border-border bg-card p-3">
+    <div className="border-t border-border bg-card/95 p-3 shadow-[0_-2px_10px_oklch(0_0_0/0.03)] backdrop-blur">
       {replyTo && (
         <div className="mb-2">
           <ReplyQuote
@@ -745,7 +745,7 @@ export function MessageComposer({
             // The placeholder text also surfaces the read-only state.
             title={readOnly ? t("readOnlyTitle") : undefined}
             className={cn(
-              "flex-1 resize-none rounded-xl border border-border bg-muted px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary/50",
+              "flex-1 resize-none rounded-2xl border border-border bg-card px-4 py-2.5 text-sm text-foreground shadow-sm placeholder:text-muted-foreground outline-none transition-colors focus:border-primary focus:ring-3 focus:ring-primary/10",
               (sessionExpired || readOnly) && "cursor-not-allowed opacity-50"
             )}
           />

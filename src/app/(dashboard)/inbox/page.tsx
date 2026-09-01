@@ -562,7 +562,7 @@ function InboxPageInner() {
   const hasActiveConv = !!activeConversation;
 
   return (
-    <div className="-m-4 flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden sm:-m-6">
+    <div className="-m-3 flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden sm:-m-5 lg:-m-6">
       {/* WhatsApp connection banner — in the flex column, not absolute,
           so it pushes the panels down instead of overlapping them. */}
       {whatsappConnected === false && (
@@ -626,11 +626,13 @@ function InboxPageInner() {
           />
         </div>
 
-        {/* Right panel: Contact sidebar — desktop only, and only when the
-            agent hasn't collapsed it via the thread-header toggle (#258).
+        {/* Right panel: Contact sidebar — desktop only, and only when a
+            contact is selected and the agent hasn't collapsed it via the
+            thread-header toggle (#258). Keeping it out of the empty state
+            avoids repeating the thread's "Select a conversation" prompt.
             On mobile it's always hidden (the `lg:block` below), so the
             toggle — which is itself desktop-only — never affects it. */}
-        {contactPanelOpen && (
+        {contactPanelOpen && activeContact && (
           <div className="hidden lg:block">
             <ContactSidebar contact={activeContact} />
           </div>
