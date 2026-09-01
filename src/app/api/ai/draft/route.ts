@@ -9,6 +9,7 @@ import { generateReply } from '@/lib/ai/generate'
 import { buildSystemPrompt } from '@/lib/ai/defaults'
 import { latestUserMessage } from '@/lib/ai/query'
 import { logAiUsage } from '@/lib/ai/usage'
+import { recordAiDecisionTrace } from '@/lib/ai/decision-trace'
 import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { AiError } from '@/lib/ai/types'
 import {
@@ -113,22 +114,46 @@ export async function POST(request: Request) {
     })
 
     const { text, usage } = await generateReply({ config, systemPrompt, messages })
+    const requestId = crypto.randomUUID()
 
     try {
       const admin = supabaseAdmin()
-      after(() =>
-        logAiUsage(admin, {
-          requestId: crypto.randomUUID(),
-          accountId,
-          conversationId,
-          mode: 'draft',
-          provider: config.provider,
-          model: config.model,
-          usage,
-        }),
-      )
+      after(async () => {
+        await Promise.all([
+          logAiUsage(admin, {
+            requestId,
+            accountId,
+            conversationId,
+            mode: 'draft',
+            provider: config.provider,
+            model: config.model,
+            usage,
+          }),
+          recordAiDecisionTrace(admin, {
+            accountId,
+            contactId: conversation.contact_id,
+            conversationId,
+            operation: 'draft',
+            outcome: 'draft_generated',
+            decisionSummary:
+              'Generated an agent-review draft using bounded conversation context, optional durable relationship context and approved knowledge when available.',
+            conversationContextUsed: messages.length > 0,
+            relationshipContextUsed: Boolean(relationshipContext),
+            approvedKnowledgeUsed: knowledge.length > 0,
+            policyChecks: [
+              { name: 'authenticated_agent', result: 'pass' },
+              { name: 'account_ai_entitlement', result: 'pass' },
+              { name: 'human_review_before_send', result: 'pass' },
+            ],
+            modelProvider: config.provider,
+            modelName: config.model,
+            correlationId: requestId,
+            createdBy: userId,
+          }),
+        ])
+      })
     } catch (logErr) {
-      console.error('[ai/draft] usage log skipped:', logErr)
+      console.error('[ai/draft] post-response logging skipped:', logErr)
     }
 
     return NextResponse.json({ draft: text })
