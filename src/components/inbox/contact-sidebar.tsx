@@ -87,6 +87,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
   const [signals, setSignals] = useState<SignalRow[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationRow[]>([]);
   const [relationshipLinks, setRelationshipLinks] = useState(0);
+  const [intelligenceNow, setIntelligenceNow] = useState(0);
   const [newNote, setNewNote] = useState("");
   const [addingNote, setAddingNote] = useState(false);
 
@@ -179,10 +180,12 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
         : ((recommendationsRes.data ?? []) as RecommendationRow[]),
     );
     setRelationshipLinks(linksRes.error ? 0 : (linksRes.count ?? 0));
+    // Capture the reference time as part of this async data refresh rather
+    // than calling Date.now() during render (React render must stay pure).
+    setIntelligenceNow(Date.now());
   }, [contact]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchContactData();
   }, [fetchContactData]);
 
@@ -420,9 +423,10 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
               title="Commitment Radar"
             >
               {commitments.slice(0, 3).map((commitment) => {
-                const overdue = commitment.due_at
-                  ? new Date(commitment.due_at).getTime() < Date.now()
-                  : false;
+                const overdue =
+                  Boolean(commitment.due_at) &&
+                  intelligenceNow > 0 &&
+                  new Date(commitment.due_at as string).getTime() < intelligenceNow;
                 return (
                   <div key={commitment.id} className="rounded-lg bg-muted px-3 py-2">
                     <div className="flex items-start justify-between gap-2">
