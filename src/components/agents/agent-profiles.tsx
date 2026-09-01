@@ -13,14 +13,14 @@ import { runSingleAgentCreation } from "@/lib/ai/create-agent-flow";
 
 const PRESETS: Record<string, string> = {
   sales:
-    "Qualify the lead, understand the customer's goal, answer accurately from approved knowledge, capture buying signals, recommend the next best step, and hand off when pricing or commitments need human approval.",
+    "Qualify the lead, understand the customer's goal, answer accurately from approved knowledge, capture explicit buying signals and durable relationship context, keep agreed commitments visible, recommend the next best step, and hand off when pricing or commitments need human approval.",
   support:
-    "Resolve customer questions accurately and calmly using approved knowledge. Ask only necessary clarifying questions, never invent policy, and hand off when confidence is low or a complaint needs a human.",
+    "Resolve customer questions accurately and calmly using approved knowledge. Preserve explicit preferences or commitments that matter to future service, ask only necessary clarifying questions, never invent policy, and hand off when confidence is low or a complaint needs a human.",
   receptionist:
-    "Welcome customers, understand why they contacted the business, answer basic approved questions, collect required details, schedule or route the request, and keep responses concise.",
+    "Welcome customers, understand why they contacted the business, answer basic approved questions, collect required details, preserve useful explicit relationship context, schedule or route the request, and keep responses concise.",
   lead_qualifier:
-    "Identify need, urgency, budget signals and decision readiness. Ask short qualification questions, update the CRM context, and route qualified leads to a human sales agent with a concise summary.",
-  custom: "Follow the business instructions and approved knowledge. Be concise, safe and transparent when a human is needed.",
+    "Identify need, urgency, budget signals and decision readiness. Ask short qualification questions, update the CRM context, preserve explicit durable facts and agreed next steps, and route qualified leads to a human sales agent with a concise summary.",
+  custom: "Follow the business instructions and approved knowledge. Preserve only explicit, useful relationship context and real commitments. Be concise, safe and transparent when a human is needed.",
 };
 
 export function AgentProfiles({
@@ -75,12 +75,14 @@ export function AgentProfiles({
               agentType: type,
               systemPrompt: form.get("systemPrompt"),
               isDefault: form.get("defaultAgent") === "on",
-              goals: ["answer", "qualify", "route", "handoff"],
+              goals: ["answer", "qualify", "remember", "commit", "route", "handoff"],
               toolPolicy: {
                 crm_context: true,
                 knowledge_base: true,
                 create_task: true,
                 create_appointment: true,
+                remember_relationship: true,
+                record_commitment: true,
               },
               handoffPolicy: { low_confidence: true, complaint: true, human_request: true },
             }),
@@ -132,7 +134,7 @@ export function AgentProfiles({
             <h2 className="font-semibold text-foreground">Autonomous agent profiles</h2>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Create focused agents for sales, support, reception and qualification. Provider secrets stay in the existing BYO AI configuration.
+            Create focused agents for sales, support, reception and qualification. Governed agents can preserve explicit relationship memory and real commitments after the reply slot is safely claimed; provider secrets stay in the existing BYO AI configuration.
           </p>
         </div>
         <div className="divide-y divide-border">
