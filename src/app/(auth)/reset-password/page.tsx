@@ -107,7 +107,7 @@ export default function ResetPasswordPage() {
       <AuthShell>
         <Card className="border-border/70 bg-card/80 shadow-2xl shadow-black/10 backdrop-blur-xl">
           <CardHeader className="items-center space-y-4 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-400/20 bg-teal-400/10 text-teal-400">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
               <CheckCircle2 className="h-7 w-7" />
             </div>
             <div>
@@ -164,7 +164,7 @@ export default function ResetPasswordPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-11 border-border bg-muted/60 text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
+                className="h-11 bg-card text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
@@ -179,7 +179,7 @@ export default function ResetPasswordPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="h-11 border-border bg-muted/60 text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
+                className="h-11 bg-card text-foreground placeholder:text-muted-foreground"
               />
             </div>
 

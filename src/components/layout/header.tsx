@@ -57,13 +57,13 @@ export function Header({ onOpenSidebar }: HeaderProps) {
     "U";
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-background px-4 lg:px-6">
+    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/80 bg-card/95 px-3 shadow-[0_1px_3px_oklch(0_0_0/0.03)] backdrop-blur sm:px-4 lg:px-5">
       <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
           onClick={onOpenSidebar}
           aria-label={t("openMenu")}
-          className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary lg:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -77,7 +77,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="flex items-center gap-2 rounded-md px-1 py-1 transition-colors hover:bg-muted/70 focus:bg-muted/70 focus:outline-none data-popup-open:bg-muted/70 sm:gap-3 sm:pl-1 sm:pr-3"
+            className="flex items-center gap-2 rounded-xl px-1 py-1 transition-colors hover:bg-primary-soft focus:bg-primary-soft focus:outline-none data-popup-open:bg-primary-soft sm:gap-3 sm:pl-1 sm:pr-3"
             aria-label={t("openAccountMenu")}
           >
             <Avatar className="size-8">

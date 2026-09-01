@@ -8,14 +8,14 @@ interface AuthShellProps {
 
 export function AuthShell({ children }: AuthShellProps) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background">
+    <div className="wova8-auth-screen relative min-h-screen overflow-hidden">
       <div
         aria-hidden
         className="pointer-events-none absolute -left-44 -top-44 h-[34rem] w-[34rem] rounded-full bg-primary/15 blur-3xl"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-52 -right-40 h-[34rem] w-[34rem] rounded-full bg-teal-400/10 blur-3xl"
+        className="pointer-events-none absolute -bottom-52 -right-40 h-[34rem] w-[34rem] rounded-full bg-primary/10 blur-3xl"
       />
 
       <div className="relative grid min-h-screen lg:grid-cols-[1.08fr_0.92fr]">
@@ -29,12 +29,12 @@ export function AuthShell({ children }: AuthShellProps) {
 
           <div className="relative my-auto max-w-2xl py-14">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
-              <span className="h-1.5 w-1.5 rounded-full bg-teal-400 shadow-[0_0_0_4px_rgba(45,212,191,0.10)]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_0_4px_var(--primary-soft)]" />
               AI-powered customer engagement
             </div>
             <h1 className="max-w-xl text-5xl font-semibold leading-[0.98] tracking-[-0.055em] text-foreground xl:text-6xl">
               Conversations become
-              <span className="block bg-gradient-to-r from-indigo-300 via-primary to-teal-300 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-emerald-300 via-primary to-emerald-600 bg-clip-text text-transparent">
                 relationships that grow.
               </span>
             </h1>
