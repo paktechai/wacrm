@@ -186,6 +186,9 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
   }, [contact]);
 
   useEffect(() => {
+    // This effect intentionally synchronizes the selected contact prop with
+    // external Supabase state. Updates occur after the async fetch resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchContactData();
   }, [fetchContactData]);
 
