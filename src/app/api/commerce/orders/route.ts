@@ -29,7 +29,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "At least one product is required" }, { status: 400 });
     }
 
-    const productIds = [...new Set(requested.map((item) => item.productId).filter((id): id is string => typeof id === "string" && id.length > 0))];
+    if (
+      requested.some(
+        (item) =>
+          typeof item.productId !== "string" ||
+          !item.productId.trim() ||
+          !Number.isFinite(Number(item.quantity ?? 1)) ||
+          Number(item.quantity ?? 1) <= 0,
+      )
+    ) {
+      return NextResponse.json(
+        { error: "Each order item requires an available product and a quantity greater than zero" },
+        { status: 400 },
+      );
+    }
+
+    const discount = Number(body?.discount ?? 0);
+    const tax = Number(body?.tax ?? 0);
+    if (!Number.isFinite(discount) || discount < 0 || !Number.isFinite(tax) || tax < 0) {
+      return NextResponse.json(
+        { error: "Discount and tax must be zero or greater" },
+        { status: 400 },
+      );
+    }
+
+    const productIds = [...new Set(requested.map((item) => item.productId as string))];
     const { data: products, error: productsError } = await supabase
       .from("products")
       .select("id,name,sku,price,currency")
@@ -58,8 +82,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "All order items must use the same currency" }, { status: 400 });
     }
     const subtotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
-    const discount = Math.max(0, Number(body?.discount ?? 0));
-    const tax = Math.max(0, Number(body?.tax ?? 0));
     const total = Math.max(0, Math.round((subtotal - discount + tax) * 100) / 100);
     const orderNumber = `WOVA8-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
 

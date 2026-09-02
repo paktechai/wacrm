@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { CreditCard, Package, Plus, RefreshCw, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
+import { validateOrderDraft } from "@/lib/commerce/order-validation";
 
 type Product = {
   id: string;
@@ -28,6 +29,7 @@ export default function CommercePage() {
   const [loading, setLoading] = useState(true);
   const [creatingProduct, setCreatingProduct] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
   const [creatingLink, setCreatingLink] = useState(false);
 
   const load = useCallback(async () => {
@@ -59,6 +61,10 @@ export default function CommercePage() {
   const totalValue = useMemo(
     () => orders.reduce((sum, order) => sum + Number(order.total || 0), 0),
     [orders],
+  );
+  const activeProducts = useMemo(
+    () => products.filter((product) => product.is_active),
+    [products],
   );
 
   async function createProduct(event: FormEvent<HTMLFormElement>) {
@@ -93,28 +99,50 @@ export default function CommercePage() {
   async function createOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (creatingOrder) return;
-    const form = new FormData(event.currentTarget);
-    const productId = String(form.get("productId") || "");
-    const quantity = Number(form.get("quantity") || 1);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const validation = validateOrderDraft(
+      {
+        productId: form.get("productId"),
+        quantity: form.get("quantity"),
+        discount: form.get("discount"),
+        tax: form.get("tax"),
+      },
+      activeProducts.map((product) => product.id),
+    );
+    if (!validation.ok) {
+      setOrderError(validation.error);
+      return;
+    }
+
+    setOrderError(null);
     setCreatingOrder(true);
     try {
       const response = await fetch("/api/commerce/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: [{ productId, quantity }],
-          discount: Number(form.get("discount") || 0),
-          tax: Number(form.get("tax") || 0),
+          items: [
+            {
+              productId: validation.value.productId,
+              quantity: validation.value.quantity,
+            },
+          ],
+          discount: validation.value.discount,
+          tax: validation.value.tax,
           notes: form.get("notes"),
         }),
       });
-      const payload = await response.json();
+      const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error || "Could not create order");
-      event.currentTarget.reset();
+      if (!payload?.order) throw new Error("The order response was incomplete. Please try again.");
+      formElement.reset();
       setOrders((items) => [payload.order, ...items]);
       toast.success(`Order ${payload.order.order_number} created`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create order");
+      const message = error instanceof Error ? error.message : "Could not create order";
+      setOrderError(message);
+      toast.error(message);
     } finally {
       setCreatingOrder(false);
     }
@@ -198,16 +226,19 @@ export default function CommercePage() {
         <section className="rounded-2xl border border-border bg-card">
           <div className="border-b border-border p-5">
             <h2 className="font-semibold text-foreground">Create order</h2>
-            <form onSubmit={createOrder} className="mt-4 grid gap-3 sm:grid-cols-2">
-              <select name="productId" required className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary sm:col-span-2">
+            <form onSubmit={createOrder} onInput={() => setOrderError(null)} noValidate className="mt-4 grid gap-3 sm:grid-cols-2">
+              <select name="productId" required aria-invalid={orderError ? true : undefined} aria-describedby="create-order-error" className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary sm:col-span-2">
                 <option value="">Select product</option>
-                {products.filter((product) => product.is_active).map((product) => <option key={product.id} value={product.id}>{product.name} — {product.currency} {Number(product.price).toLocaleString()}</option>)}
+                {activeProducts.map((product) => <option key={product.id} value={product.id}>{product.name} — {product.currency} {Number(product.price).toLocaleString()}</option>)}
               </select>
               <input name="quantity" type="number" min="0.001" step="0.001" defaultValue="1" className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
               <input name="discount" type="number" min="0" step="0.01" defaultValue="0" placeholder="Discount" className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
               <input name="tax" type="number" min="0" step="0.01" defaultValue="0" placeholder="Tax" className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
               <input name="notes" placeholder="Order notes" className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
-              <button disabled={creatingOrder || products.length === 0} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50 sm:col-span-2"><ShoppingBag className="size-4" /> {creatingOrder ? "Creating…" : "Create order"}</button>
+              <div id="create-order-error" role="alert" aria-live="polite" className={`text-sm sm:col-span-2 ${orderError ? "text-destructive" : "text-muted-foreground"}`}>
+                {orderError || (activeProducts.length === 0 ? "Add an active product before creating an order." : "Select a product and enter a quantity greater than zero.")}
+              </div>
+              <button type="submit" disabled={creatingOrder || activeProducts.length === 0} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2"><ShoppingBag className="size-4" /> {creatingOrder ? "Creating…" : "Create order"}</button>
             </form>
           </div>
           <div className="divide-y divide-border">
