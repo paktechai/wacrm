@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from 'next/link'
 import {
   Bot,
   CheckCircle2,
@@ -7,13 +7,13 @@ import {
   MessageSquare,
   Rocket,
   UsersRound,
-} from 'lucide-react';
+} from 'lucide-react'
 
-import { getCurrentAccount } from '@/lib/auth/account';
-import { getAccountEntitlements } from '@/lib/billing/entitlements';
+import { getCurrentAccount } from '@/lib/auth/account'
+import { getAccountEntitlements } from '@/lib/billing/entitlements'
 
 export default async function OnboardingPage() {
-  const ctx = await getCurrentAccount();
+  const ctx = await getCurrentAccount()
 
   const [
     { data: whatsapp },
@@ -43,11 +43,11 @@ export default async function OnboardingPage() {
     getAccountEntitlements(ctx.supabase, ctx.accountId, {
       lifecycleStatus: ctx.account.lifecycleStatus,
     }),
-  ]);
+  ])
 
   const metaReady = Boolean(
-    process.env.META_APP_ID && process.env.META_EMBEDDED_SIGNUP_CONFIG_ID
-  );
+    process.env.META_APP_ID && process.env.META_EMBEDDED_SIGNUP_CONFIG_ID,
+  )
 
   const steps = [
     {
@@ -78,9 +78,7 @@ export default async function OnboardingPage() {
       done: Boolean(whatsapp?.phone_number_id),
       icon: MessageSquare,
       href: '/settings?tab=whatsapp',
-      action: whatsapp?.phone_number_id
-        ? 'Review connection'
-        : 'Open WhatsApp setup',
+      action: whatsapp?.phone_number_id ? 'Review connection' : 'Open WhatsApp setup',
     },
     {
       title: 'Build your team',
@@ -114,48 +112,45 @@ export default async function OnboardingPage() {
       href: '/contacts',
       action: 'Open contacts',
     },
-  ];
+  ]
 
-  const completed = steps.filter((step) => step.done).length;
-  const progress = Math.round((completed / steps.length) * 100);
+  const completed = steps.filter((step) => step.done).length
+  const progress = Math.round((completed / steps.length) * 100)
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-7">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="text-primary flex items-center gap-2 text-xs font-semibold tracking-[0.15em] uppercase">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-primary">
             <Rocket className="size-4" />
             Wova8 CRM setup
           </div>
-          <h1 className="text-foreground mt-2 text-3xl font-semibold tracking-[-0.04em]">
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground">
             Get your workspace ready
           </h1>
-          <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
-            A single checklist for account, plan, WhatsApp, team, AI and
-            customer-data readiness.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+            A single checklist for account, plan, WhatsApp, team, AI and customer-data readiness.
           </p>
         </div>
-        <div className="border-border bg-card rounded-2xl border px-5 py-4 text-right">
-          <div className="text-foreground text-2xl font-semibold">
-            {progress}%
-          </div>
-          <div className="text-muted-foreground mt-1 text-xs">
+        <div className="rounded-2xl border border-border bg-card px-5 py-4 text-right">
+          <div className="text-2xl font-semibold text-foreground">{progress}%</div>
+          <div className="mt-1 text-xs text-muted-foreground">
             {completed} of {steps.length} complete
           </div>
         </div>
       </header>
 
-      <div className="bg-muted h-2 overflow-hidden rounded-full">
+      <div className="h-2 overflow-hidden rounded-full bg-muted">
         <div
-          className="bg-primary h-full rounded-full transition-all"
+          className="h-full rounded-full bg-primary transition-all"
           style={{ width: `${progress}%` }}
         />
       </div>
 
-      <section className="border-border bg-card overflow-hidden rounded-2xl border">
-        <div className="divide-border divide-y">
+      <section className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="divide-y divide-border">
           {steps.map((step) => {
-            const Icon = step.icon;
+            const Icon = step.icon
             return (
               <div
                 key={step.title}
@@ -174,39 +169,35 @@ export default async function OnboardingPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-foreground text-sm font-semibold">
-                        {step.title}
-                      </h2>
+                      <h2 className="text-sm font-semibold text-foreground">{step.title}</h2>
                       {step.done ? (
                         <CheckCircle2 className="size-4 text-emerald-400" />
                       ) : (
-                        <Circle className="text-muted-foreground size-4" />
+                        <Circle className="size-4 text-muted-foreground" />
                       )}
                     </div>
-                    <p className="text-muted-foreground mt-1 text-xs leading-5">
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       {step.description}
                     </p>
                   </div>
                 </div>
                 <Link
                   href={step.href}
-                  className="border-border bg-background text-foreground hover:bg-muted inline-flex h-9 shrink-0 items-center justify-center rounded-lg border px-3 text-xs font-semibold transition-colors"
+                  className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
                 >
                   {step.action}
                 </Link>
               </div>
-            );
+            )
           })}
         </div>
       </section>
 
       {!metaReady ? (
         <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-5 py-4 text-xs leading-5 text-amber-200">
-          Meta Embedded Signup is intentionally waiting for the Wova8
-          domain/Tech Provider setup. The rest of the CRM can be configured and
-          tested independently.
+          Meta Embedded Signup is intentionally waiting for the Wova8 domain/Tech Provider setup. The rest of the CRM can be configured and tested independently.
         </div>
       ) : null}
     </div>
-  );
+  )
 }
