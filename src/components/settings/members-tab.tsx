@@ -132,7 +132,8 @@ export function MembersTab() {
 
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [invitationsLoading, setInvitationsLoading] = useState(canManageMembers);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [removingMember, setRemovingMember] = useState<Member | null>(null);
@@ -141,39 +142,42 @@ export function MembersTab() {
   );
 
   const loadEverything = useCallback(async () => {
-    try {
-      const [mres, ires] = await Promise.all([
-        fetch('/api/account/members', { cache: 'no-store' }),
-        canManageMembers
-          ? fetch('/api/account/invitations', { cache: 'no-store' })
-          : Promise.resolve(null),
-      ]);
+    setMembersLoading(true);
+    setInvitationsLoading(canManageMembers);
 
-      if (!mres.ok) {
-        const payload = await mres.json().catch(() => ({}));
-        toast.error(payload.error || 'Failed to load members');
-        return;
-      }
-      const mdata = (await mres.json()) as { members: Member[] };
-      setMembers(mdata.members);
-
-      if (ires) {
-        if (!ires.ok) {
-          const payload = await ires.json().catch(() => ({}));
-          toast.error(payload.error || 'Failed to load invitations');
-          return;
+    const membersRequest = fetch('/api/account/members', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.error || 'Failed to load members');
         }
-        const idata = (await ires.json()) as { invitations: Invitation[] };
-        setInvitations(idata.invitations);
-      } else {
-        setInvitations([]);
-      }
-    } catch (err) {
-      console.error('[MembersTab] load error:', err);
-      toast.error('Could not reach the server');
-    } finally {
-      setLoading(false);
-    }
+        const data = (await response.json()) as { members: Member[] };
+        setMembers(data.members);
+      })
+      .catch((err: unknown) => {
+        console.error('[MembersTab] members load error:', err);
+        toast.error(err instanceof Error ? err.message : 'Could not reach the server');
+      })
+      .finally(() => setMembersLoading(false));
+
+    const invitationsRequest = canManageMembers
+      ? fetch('/api/account/invitations', { cache: 'no-store' })
+          .then(async (response) => {
+            if (!response.ok) {
+              const payload = await response.json().catch(() => ({}));
+              throw new Error(payload.error || 'Failed to load invitations');
+            }
+            const data = (await response.json()) as { invitations: Invitation[] };
+            setInvitations(data.invitations);
+          })
+          .catch((err: unknown) => {
+            console.error('[MembersTab] invitations load error:', err);
+            toast.error(err instanceof Error ? err.message : 'Could not reach the server');
+          })
+          .finally(() => setInvitationsLoading(false))
+      : Promise.resolve(setInvitations([]));
+
+    await Promise.allSettled([membersRequest, invitationsRequest]);
   }, [canManageMembers]);
 
   useEffect(() => {
@@ -272,14 +276,6 @@ export function MembersTab() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="size-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <section className="animate-in fade-in-50 space-y-6 duration-200">
       <SettingsPanelHead
@@ -322,8 +318,21 @@ export function MembersTab() {
         })()}
 
       {/* Roster */}
-      <Card>
+      <Card aria-busy={membersLoading}>
         <CardContent className="p-0">
+          {membersLoading && members.length === 0 ? (
+            <div className="space-y-4 p-4" aria-label={t('title')}>
+              {[0, 1, 2].map((row) => (
+                <div key={row} className="flex animate-pulse items-center gap-4">
+                  <div className="size-9 shrink-0 rounded-full bg-muted" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-4 w-36 rounded bg-muted" />
+                    <div className="h-3 w-52 max-w-full rounded bg-muted" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
           <ul className="divide-y divide-border">
             {members.map((member) => {
               const roleMeta = ROLE_META[member.role];
@@ -470,6 +479,7 @@ export function MembersTab() {
               );
             })}
           </ul>
+          )}
         </CardContent>
       </Card>
 
@@ -482,7 +492,7 @@ export function MembersTab() {
               {t('pendingInvitations')}
             </h3>
             <Badge className="bg-muted text-muted-foreground border-border">
-              {invitations.length}
+              {invitationsLoading ? <Loader2 className="size-3 animate-spin" /> : invitations.length}
             </Badge>
           </div>
           {/* P10 — make the no-resend design explicit. Admins were
@@ -496,7 +506,18 @@ export function MembersTab() {
             </p>
           ) : null}
 
-          {invitations.length === 0 ? (
+          {invitationsLoading && invitations.length === 0 ? (
+            <Card aria-busy="true" aria-label={t('pendingInvitations')}>
+              <CardContent className="space-y-3 py-5">
+                {[0, 1].map((row) => (
+                  <div key={row} className="animate-pulse space-y-2">
+                    <div className="h-4 w-32 rounded bg-muted" />
+                    <div className="h-3 w-48 max-w-full rounded bg-muted" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : invitations.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                 <Mail className="size-6 text-muted-foreground" />

@@ -125,7 +125,9 @@ export function ProfileForm() {
         const { error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(path, pendingAvatar, {
-            cacheControl: '3600',
+            // Unique timestamped paths make immutable caching safe. The
+            // original file is uploaded without resizing or recompression.
+            cacheControl: '31536000',
             upsert: true,
             contentType: pendingAvatar.type,
           });
@@ -220,7 +222,7 @@ export function ProfileForm() {
           <div className="flex flex-wrap items-center gap-5">
             <Avatar size="lg" className="size-16">
               {currentAvatar ? (
-                <AvatarImage src={currentAvatar} alt={fullName || 'Avatar'} />
+                <AvatarImage src={currentAvatar} alt={fullName || 'Avatar'} loading="eager" fetchPriority="high" />
               ) : null}
               <AvatarFallback className="bg-primary/10 text-base text-primary">
                 {initial}

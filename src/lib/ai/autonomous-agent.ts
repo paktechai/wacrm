@@ -13,6 +13,11 @@ export type PlannedAction = {
   timezone?: string | null
   lead_score?: number
   lifecycle_stage?: string
+  memory_type?: string
+  memory_key?: string | null
+  memory_summary?: string
+  confidence?: number
+  commitment_direction?: string
 }
 
 export interface AutonomousAgentResult {
@@ -30,6 +35,23 @@ type AgentProfile = {
   system_prompt: string
   tool_policy: Record<string, unknown>
 }
+
+const MEMORY_TYPES = new Set([
+  'fact',
+  'preference',
+  'context',
+  'goal',
+  'constraint',
+  'milestone',
+  'relationship',
+  'custom',
+])
+const COMMITMENT_DIRECTIONS = new Set([
+  'our_commitment',
+  'their_commitment',
+  'mutual',
+  'external',
+])
 
 function extractObject(raw: string): Record<string, unknown> | null {
   const match = raw.match(/\{[\s\S]*\}/)
@@ -55,6 +77,12 @@ function safeDate(raw: unknown): string | null {
   return value.toISOString()
 }
 
+function safeConfidence(raw: unknown, fallback = 0.8): number {
+  const numeric = Number(raw)
+  if (!Number.isFinite(numeric)) return fallback
+  return Math.max(0, Math.min(1, numeric))
+}
+
 /**
  * Resolve the configured agent id when available. If an older AI config has no
  * default_agent_id (for example an agent was created before provider setup),
@@ -72,9 +100,7 @@ async function loadProfile(
     .eq('account_id', accountId)
     .eq('is_active', true)
 
-  query = agentId
-    ? query.eq('id', agentId)
-    : query.eq('is_default', true)
+  query = agentId ? query.eq('id', agentId) : query.eq('is_default', true)
 
   const { data, error } = await query.maybeSingle()
 
@@ -99,7 +125,8 @@ async function loadProfile(
 /**
  * Execute tool calls only after the caller has atomically claimed the AI reply
  * slot. Keeping tool side effects separate from generation prevents duplicate
- * CRM tasks/appointments when two inbound webhook deliveries race.
+ * CRM tasks, appointments, memories or commitments when two inbound webhook
+ * deliveries race.
  */
 export async function executeAutonomousAgentActions(args: {
   db: SupabaseClient
@@ -119,9 +146,12 @@ export async function executeAutonomousAgentActions(args: {
     const type = action?.type
 
     if (type === 'create_task' && enabled(profile.tool_policy, 'create_task')) {
-      const title = typeof action.title === 'string' ? action.title.trim().slice(0, 200) : ''
+      const title =
+        typeof action.title === 'string' ? action.title.trim().slice(0, 200) : ''
       if (!title) continue
-      const priority = ['low', 'normal', 'high', 'urgent'].includes(action.priority ?? '')
+      const priority = ['low', 'normal', 'high', 'urgent'].includes(
+        action.priority ?? '',
+      )
         ? action.priority
         : 'normal'
       const dueAt = safeDate(action.due_at)
@@ -144,7 +174,8 @@ export async function executeAutonomousAgentActions(args: {
       type === 'create_appointment' &&
       enabled(profile.tool_policy, 'create_appointment')
     ) {
-      const title = typeof action.title === 'string' ? action.title.trim().slice(0, 200) : ''
+      const title =
+        typeof action.title === 'string' ? action.title.trim().slice(0, 200) : ''
       const startsAt = safeDate(action.starts_at)
       let endsAt = safeDate(action.ends_at)
       if (!title || !startsAt) continue
@@ -197,6 +228,87 @@ export async function executeAutonomousAgentActions(args: {
         .eq('account_id', args.accountId)
       if (error) console.error('[autonomous-agent] update_lead failed:', error)
       else executed.push('update_lead')
+      continue
+    }
+
+    if (
+      type === 'remember_relationship' &&
+      enabled(profile.tool_policy, 'remember_relationship')
+    ) {
+      const summary =
+        typeof action.memory_summary === 'string'
+          ? action.memory_summary.replace(/\s+/g, ' ').trim().slice(0, 1000)
+          : ''
+      const memoryType = MEMORY_TYPES.has(action.memory_type ?? '')
+        ? action.memory_type
+        : 'context'
+      const confidence = safeConfidence(action.confidence)
+      // Low-confidence inferences should remain transient conversation context,
+      // not durable relationship memory.
+      if (!summary || confidence < 0.7) continue
+
+      const { error } = await args.db.from('relationship_memory_entries').insert({
+        account_id: args.accountId,
+        contact_id: args.contactId,
+        memory_type: memoryType,
+        memory_key:
+          typeof action.memory_key === 'string' && action.memory_key.trim()
+            ? action.memory_key.trim().slice(0, 120)
+            : null,
+        summary,
+        source_type: 'ai',
+        source_ref: args.conversationId,
+        confidence,
+        state: 'active',
+        observed_at: new Date().toISOString(),
+        created_by: args.configOwnerUserId,
+      })
+      if (error) {
+        console.error('[autonomous-agent] remember_relationship failed:', error)
+      } else {
+        executed.push('remember_relationship')
+      }
+      continue
+    }
+
+    if (
+      type === 'record_commitment' &&
+      enabled(profile.tool_policy, 'record_commitment')
+    ) {
+      const title =
+        typeof action.title === 'string' ? action.title.trim().slice(0, 300) : ''
+      const direction = COMMITMENT_DIRECTIONS.has(
+        action.commitment_direction ?? '',
+      )
+        ? action.commitment_direction
+        : 'mutual'
+      const confidence = safeConfidence(action.confidence)
+      if (!title || confidence < 0.7) continue
+
+      const { error } = await args.db.from('relationship_commitments').insert({
+        account_id: args.accountId,
+        contact_id: args.contactId,
+        conversation_id: args.conversationId,
+        title,
+        commitment_direction: direction,
+        owner_user_id:
+          direction === 'our_commitment' || direction === 'mutual'
+            ? args.configOwnerUserId
+            : null,
+        due_at: safeDate(action.due_at),
+        status: 'open',
+        source_type: 'ai',
+        source_ref: args.conversationId,
+        confidence,
+        detected_by: 'ai',
+        detected_at: new Date().toISOString(),
+        created_by: args.configOwnerUserId,
+      })
+      if (error) {
+        console.error('[autonomous-agent] record_commitment failed:', error)
+      } else {
+        executed.push('record_commitment')
+      }
     }
   }
 
@@ -216,12 +328,18 @@ export async function runAutonomousAgent(args: {
   knowledge: string[]
   relationshipContext?: string | null
 }): Promise<AutonomousAgentResult | null> {
-  const profile = await loadProfile(args.db, args.accountId, args.config.defaultAgentId)
+  const profile = await loadProfile(
+    args.db,
+    args.accountId,
+    args.config.defaultAgentId,
+  )
   if (!profile) return null
 
   const knowledgeBlock =
     args.knowledge.length > 0
-      ? args.knowledge.map((item, index) => `[${index + 1}] ${item}`).join('\n\n')
+      ? args.knowledge
+          .map((item, index) => `[${index + 1}] ${item}`)
+          .join('\n\n')
       : 'No retrieved knowledge is available for this turn.'
 
   const systemPrompt = [
@@ -236,12 +354,14 @@ export async function runAutonomousAgent(args: {
       : '',
     `Retrieved business knowledge:\n${knowledgeBlock}`,
     args.relationshipContext?.trim()
-      ? `Bounded CRM relationship context:\n${args.relationshipContext.trim()}\nUse this only to personalize the reply. Never expose internal notes, identifiers, or operational metadata.`
+      ? `Bounded CRM relationship context:\n${args.relationshipContext.trim()}\nUse this only to personalize the reply. Never expose internal notes, identifiers, signals, confidence values, relationship graph labels, or operational metadata.`
       : '',
     `Current UTC time: ${new Date().toISOString()}`,
     'Return ONLY valid JSON with this exact top-level shape: {"reply":"text to customer","handoff":false,"actions":[]}.',
     'handoff must be true when the customer explicitly asks for a human, is making a serious complaint, or required business facts are unavailable. When handoff=true, keep actions empty.',
-    'actions may contain at most 3 safe CRM actions. Allowed action shapes are: {"type":"create_task","title":"...","due_at":"ISO date or null","priority":"low|normal|high|urgent"}, {"type":"create_appointment","title":"...","starts_at":"ISO date","ends_at":"ISO date","timezone":"IANA or UTC"}, {"type":"update_lead","lead_score":0,"lifecycle_stage":"new|qualified|opportunity|customer|inactive"}.',
+    'actions may contain at most 3 safe CRM actions. Allowed action shapes are: {"type":"create_task","title":"...","due_at":"ISO date or null","priority":"low|normal|high|urgent"}, {"type":"create_appointment","title":"...","starts_at":"ISO date","ends_at":"ISO date","timezone":"IANA or UTC"}, {"type":"update_lead","lead_score":0,"lifecycle_stage":"new|qualified|opportunity|customer|inactive"}, {"type":"remember_relationship","memory_type":"fact|preference|context|goal|constraint|milestone|relationship|custom","memory_key":"stable optional key or null","memory_summary":"explicit durable fact in one short sentence","confidence":0.0}, {"type":"record_commitment","title":"specific promise","commitment_direction":"our_commitment|their_commitment|mutual|external","due_at":"ISO date or null","confidence":0.0}.',
+    'Only use remember_relationship for stable facts, preferences, goals, constraints, milestones or relationship context that the customer explicitly stated or that is directly supported by trusted CRM context. Do not store guesses, temporary emotions, passwords, authentication secrets, payment-card data, government identifiers, or inferred sensitive personal attributes. Use confidence below 0.70 when evidence is uncertain; low-confidence memory actions will be discarded.',
+    'Only use record_commitment when a real promise or agreed next step is explicit. Do not invent dates. If no due date was agreed, use null. Use confidence below 0.70 when uncertain; low-confidence commitment actions will be discarded.',
     `Tool policy: ${JSON.stringify(profile.tool_policy)}. Never request an action whose corresponding policy key is not true. Only create an appointment when the customer clearly requested or agreed to the time; otherwise create a follow-up task or ask a clarifying question.`,
   ]
     .filter(Boolean)

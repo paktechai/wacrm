@@ -42,7 +42,49 @@ describe('formatRelationshipContext', () => {
     expect(output).toContain('Prefers a concise WhatsApp follow-up after a call.')
   })
 
-  it('bounds oversized tags, opportunities and notes', () => {
+  it('includes durable memory, commitments and active signals with provenance-friendly confidence', () => {
+    const output = formatRelationshipContext({
+      tags: [],
+      deals: [],
+      notes: [],
+      memories: [
+        {
+          type: 'preference',
+          summary: 'Prefers a call before a written proposal.',
+          confidence: 0.82,
+          observedAt: '2026-08-25T12:00:00.000Z',
+        },
+      ],
+      commitments: [
+        {
+          title: 'Send revised proposal',
+          direction: 'our_commitment',
+          dueAt: '2026-09-03T09:00:00.000Z',
+          confidence: 0.9,
+        },
+      ],
+      signals: [
+        {
+          type: 'relationship_decay',
+          summary: 'Engagement has dropped despite an open opportunity.',
+          severity: 'high',
+          confidence: 0.77,
+        },
+      ],
+    })
+
+    expect(output).toContain('Durable relationship memory (internal):')
+    expect(output).toContain('preference: Prefers a call before a written proposal.')
+    expect(output).toContain('observed 2026-08-25')
+    expect(output).toContain('confidence 82%')
+    expect(output).toContain('Open commitments / promises (internal):')
+    expect(output).toContain('Send revised proposal')
+    expect(output).toContain('due 2026-09-03')
+    expect(output).toContain('Active relationship signals (internal):')
+    expect(output).toContain('relationship_decay · high')
+  })
+
+  it('bounds oversized relationship context collections', () => {
     const output = formatRelationshipContext({
       tags: Array.from({ length: 20 }, (_, index) => `tag-${index + 1}`),
       deals: Array.from({ length: 8 }, (_, index) => ({
@@ -50,6 +92,15 @@ describe('formatRelationshipContext', () => {
       })),
       notes: Array.from({ length: 5 }, (_, index) => ({
         text: `note-${index + 1} ${'x'.repeat(700)}`,
+      })),
+      memories: Array.from({ length: 8 }, (_, index) => ({
+        summary: `memory-${index + 1}`,
+      })),
+      commitments: Array.from({ length: 7 }, (_, index) => ({
+        title: `commitment-${index + 1}`,
+      })),
+      signals: Array.from({ length: 7 }, (_, index) => ({
+        summary: `signal-${index + 1}`,
       })),
     })
 
@@ -59,5 +110,11 @@ describe('formatRelationshipContext', () => {
     expect(output).not.toContain('deal-6')
     expect(output).toContain('note-3')
     expect(output).not.toContain('note-4')
+    expect(output).toContain('memory-5')
+    expect(output).not.toContain('memory-6')
+    expect(output).toContain('commitment-4')
+    expect(output).not.toContain('commitment-5')
+    expect(output).toContain('signal-4')
+    expect(output).not.toContain('signal-5')
   })
 })

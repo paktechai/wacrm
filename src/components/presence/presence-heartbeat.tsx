@@ -20,7 +20,8 @@ import { HEARTBEAT_MS, IDLE_AFTER_MS, type StoredPresence } from "@/lib/presence
  * 'offline' from staleness — no unreliable unload write needed.
  */
 export function PresenceHeartbeat() {
-  const { accountId } = useAuth();
+  const { accountId, user } = useAuth();
+  const userId = user?.id;
 
   // 0 = "never recorded"; set on mount so we don't read the clock during
   // render (impure). Until the effect runs the tab counts as active.
@@ -31,7 +32,7 @@ export function PresenceHeartbeat() {
     // window on a fresh signup — authed but profile/account row not yet
     // created — would make touch_presence raise "No account for caller"
     // and log a spurious error. The effect re-runs once accountId lands.
-    if (!accountId) return;
+    if (!accountId || !userId) return;
 
     const supabase = createClient();
     let cancelled = false;
@@ -56,6 +57,18 @@ export function PresenceHeartbeat() {
       const t = Date.now();
       if (t - lastBeatAt < 1_000) return;
       lastBeatAt = t;
+
+      // The auth context and the Supabase client's persisted session settle
+      // independently during sign-in, refresh, and sign-out. Do not call the
+      // authenticated-only RPC in the brief window where account context is
+      // still rendered but the client has no matching session; PostgREST
+      // correctly treats that request as `anon` and returns 42501.
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+      if (cancelled || sessionError || session?.user.id !== userId) return;
+
       const { error } = await supabase.rpc("touch_presence", {
         p_status: currentStatus(),
       });
@@ -99,7 +112,7 @@ export function PresenceHeartbeat() {
       document.removeEventListener("visibilitychange", onReturn);
       window.removeEventListener("focus", onReturn);
     };
-  }, [accountId]);
+  }, [accountId, userId]);
 
   return null;
 }

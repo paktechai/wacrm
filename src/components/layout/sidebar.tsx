@@ -312,7 +312,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/60 focus:bg-muted/60 focus:outline-none data-popup-open:bg-muted/60">
               <Avatar className="size-8 shrink-0">
                 {profile?.avatar_url ? (
-                  <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? t("defaultAvatar")} />
+                  <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? t("defaultAvatar")} loading="eager" />
                 ) : null}
                 <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
                   {profile?.full_name?.charAt(0)?.toUpperCase() ??

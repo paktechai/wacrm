@@ -14,17 +14,47 @@ interface RelationshipContextData {
     text: string
     createdAt?: string | null
   }>
+  memories?: Array<{
+    type?: string | null
+    summary: string
+    confidence?: number | null
+    observedAt?: string | null
+  }>
+  commitments?: Array<{
+    title: string
+    direction?: string | null
+    dueAt?: string | null
+    confidence?: number | null
+  }>
+  signals?: Array<{
+    type?: string | null
+    summary: string
+    severity?: string | null
+    confidence?: number | null
+  }>
 }
 
 const MAX_NOTE_CHARS = 500
 const MAX_TAGS = 12
 const MAX_DEALS = 5
 const MAX_NOTES = 3
+const MAX_MEMORIES = 5
+const MAX_COMMITMENTS = 4
+const MAX_SIGNALS = 4
+
+function confidenceLabel(confidence?: number | null): string {
+  if (confidence == null || confidence >= 0.95) return ''
+  return ` · confidence ${Math.round(confidence * 100)}%`
+}
 
 /**
  * Turns CRM relationship data into a compact, provider-neutral reference
  * block. This is deliberately bounded: the AI needs useful continuity, not a
  * dump of the entire CRM record.
+ *
+ * Everything in this block is internal reference data. The system prompt is
+ * responsible for preventing internal labels, notes, signals and provenance
+ * from being exposed verbatim to a customer.
  */
 export function formatRelationshipContext(
   data: RelationshipContextData,
@@ -39,12 +69,61 @@ export function formatRelationshipContext(
 
   const deals = data.deals.slice(0, MAX_DEALS)
   if (deals.length > 0) {
-    lines.push('Related opportunities / commitments:')
+    lines.push('Related opportunities:')
     for (const deal of deals) {
-      const meta = [deal.stage, deal.status, deal.expectedCloseDate ? `expected ${deal.expectedCloseDate}` : null]
+      const meta = [
+        deal.stage,
+        deal.status,
+        deal.expectedCloseDate ? `expected ${deal.expectedCloseDate}` : null,
+      ]
         .filter(Boolean)
         .join(' · ')
       lines.push(`- ${deal.title}${meta ? ` (${meta})` : ''}`)
+    }
+  }
+
+  const memories = (data.memories ?? [])
+    .filter((memory) => memory.summary.trim())
+    .slice(0, MAX_MEMORIES)
+  if (memories.length > 0) {
+    lines.push('Durable relationship memory (internal):')
+    for (const memory of memories) {
+      const type = memory.type ? `${memory.type}: ` : ''
+      const date = memory.observedAt ? ` · observed ${memory.observedAt.slice(0, 10)}` : ''
+      lines.push(
+        `- ${type}${memory.summary.replace(/\s+/g, ' ').trim().slice(0, MAX_NOTE_CHARS)}${date}${confidenceLabel(memory.confidence)}`,
+      )
+    }
+  }
+
+  const commitments = (data.commitments ?? [])
+    .filter((commitment) => commitment.title.trim())
+    .slice(0, MAX_COMMITMENTS)
+  if (commitments.length > 0) {
+    lines.push('Open commitments / promises (internal):')
+    for (const commitment of commitments) {
+      const meta = [
+        commitment.direction,
+        commitment.dueAt ? `due ${commitment.dueAt.slice(0, 10)}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+      lines.push(
+        `- ${commitment.title}${meta ? ` (${meta}${confidenceLabel(commitment.confidence)})` : confidenceLabel(commitment.confidence)}`,
+      )
+    }
+  }
+
+  const signals = (data.signals ?? [])
+    .filter((signal) => signal.summary.trim())
+    .slice(0, MAX_SIGNALS)
+  if (signals.length > 0) {
+    lines.push('Active relationship signals (internal):')
+    for (const signal of signals) {
+      const meta = [signal.type, signal.severity].filter(Boolean).join(' · ')
+      lines.push(
+        `- ${signal.summary.replace(/\s+/g, ' ').trim().slice(0, MAX_NOTE_CHARS)}${meta ? ` (${meta}${confidenceLabel(signal.confidence)})` : confidenceLabel(signal.confidence)}`,
+      )
     }
   }
 
@@ -65,15 +144,24 @@ export function formatRelationshipContext(
 
 /**
  * Fetch the smallest useful relationship snapshot for an AI draft/auto-reply.
- * Errors are best-effort: a temporary CRM-context failure must never break the
- * inbox draft button or automatic reply path.
+ * Errors are best-effort: a temporary CRM-context failure — including a
+ * partially rolled-out Relationship OS migration — must never break the inbox
+ * draft button or automatic reply path.
  */
 export async function buildRelationshipContext(
   db: SupabaseClient,
   contactId: string,
 ): Promise<string | null> {
   try {
-    const [contactRes, tagsRes, dealsRes, notesRes] = await Promise.all([
+    const [
+      contactRes,
+      tagsRes,
+      dealsRes,
+      notesRes,
+      memoriesRes,
+      commitmentsRes,
+      signalsRes,
+    ] = await Promise.all([
       db
         .from('contacts')
         .select('name, company')
@@ -95,6 +183,27 @@ export async function buildRelationshipContext(
         .eq('contact_id', contactId)
         .order('created_at', { ascending: false })
         .limit(MAX_NOTES),
+      db
+        .from('relationship_memory_entries')
+        .select('memory_type, summary, confidence, observed_at')
+        .eq('contact_id', contactId)
+        .eq('state', 'active')
+        .order('observed_at', { ascending: false })
+        .limit(MAX_MEMORIES),
+      db
+        .from('relationship_commitments')
+        .select('title, commitment_direction, due_at, confidence')
+        .eq('contact_id', contactId)
+        .eq('status', 'open')
+        .order('due_at', { ascending: true, nullsFirst: false })
+        .limit(MAX_COMMITMENTS),
+      db
+        .from('relationship_signals')
+        .select('signal_type, summary, severity, confidence')
+        .eq('contact_id', contactId)
+        .eq('status', 'active')
+        .order('observed_at', { ascending: false })
+        .limit(MAX_SIGNALS),
     ])
 
     if (contactRes.error) return null
@@ -139,12 +248,60 @@ export async function buildRelationshipContext(
         createdAt: note.created_at,
       }))
 
+    const memoryRows = memoriesRes.error
+      ? []
+      : ((memoriesRes.data ?? []) as unknown as Array<{
+          memory_type?: string | null
+          summary: string
+          confidence?: number | null
+          observed_at?: string | null
+        }>)
+    const memories = memoryRows.map((memory) => ({
+      type: memory.memory_type,
+      summary: memory.summary,
+      confidence: memory.confidence,
+      observedAt: memory.observed_at,
+    }))
+
+    const commitmentRows = commitmentsRes.error
+      ? []
+      : ((commitmentsRes.data ?? []) as unknown as Array<{
+          title: string
+          commitment_direction?: string | null
+          due_at?: string | null
+          confidence?: number | null
+        }>)
+    const commitments = commitmentRows.map((commitment) => ({
+      title: commitment.title,
+      direction: commitment.commitment_direction,
+      dueAt: commitment.due_at,
+      confidence: commitment.confidence,
+    }))
+
+    const signalRows = signalsRes.error
+      ? []
+      : ((signalsRes.data ?? []) as unknown as Array<{
+          signal_type?: string | null
+          summary: string
+          severity?: string | null
+          confidence?: number | null
+        }>)
+    const signals = signalRows.map((signal) => ({
+      type: signal.signal_type,
+      summary: signal.summary,
+      severity: signal.severity,
+      confidence: signal.confidence,
+    }))
+
     return formatRelationshipContext({
       name: contact?.name,
       company: contact?.company,
       tags,
       deals,
       notes,
+      memories,
+      commitments,
+      signals,
     })
   } catch (err) {
     console.error('[ai relationship context] failed:', err)

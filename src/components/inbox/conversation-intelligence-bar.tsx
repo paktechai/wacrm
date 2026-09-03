@@ -4,6 +4,14 @@ import { useMemo, useState } from "react";
 import { AlarmClock, BrainCircuit, Flag, MoonStar } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import type { Conversation } from "@/types";
 
 type ModernConversation = Conversation & {
@@ -69,26 +77,35 @@ export function ConversationIntelligenceBar({
 
   return (
     <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card/70 px-3 py-2 backdrop-blur-sm">
-      <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1.5">
-        <Flag className="size-3.5 text-muted-foreground" />
-        <select
+      <Select
+        value={priority}
+        disabled={saving}
+        onValueChange={(value) => {
+          if (!value) return;
+          patch(
+            { priority: value },
+            { priority: value as ModernConversation["priority"] },
+          );
+        }}
+      >
+        <SelectTrigger
           aria-label="Conversation priority"
-          value={priority}
-          disabled={saving}
-          onChange={(event) =>
-            patch(
-              { priority: event.target.value },
-              { priority: event.target.value as ModernConversation["priority"] },
-            )
-          }
-          className="bg-transparent text-xs font-medium text-foreground outline-none"
+          size="sm"
+          className="h-8 rounded-lg border-border bg-background px-2 text-xs font-medium text-foreground shadow-none hover:bg-muted/40 dark:bg-background dark:hover:bg-muted/40"
         >
-          <option value="low">Low</option>
-          <option value="normal">Normal</option>
-          <option value="high">High</option>
-          <option value="urgent">Urgent</option>
-        </select>
-      </div>
+          <Flag className="size-3.5 text-muted-foreground" />
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent
+          align="start"
+          className="border border-border bg-popover text-popover-foreground shadow-xl"
+        >
+          <SelectItem value="low">Low</SelectItem>
+          <SelectItem value="normal">Normal</SelectItem>
+          <SelectItem value="high">High</SelectItem>
+          <SelectItem value="urgent">Urgent</SelectItem>
+        </SelectContent>
+      </Select>
 
       <button
         type="button"

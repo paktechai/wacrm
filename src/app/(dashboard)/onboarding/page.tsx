@@ -40,7 +40,9 @@ export default async function OnboardingPage() {
       .from('contacts')
       .select('id', { count: 'exact', head: true })
       .eq('account_id', ctx.accountId),
-    getAccountEntitlements(ctx.supabase, ctx.accountId),
+    getAccountEntitlements(ctx.supabase, ctx.accountId, {
+      lifecycleStatus: ctx.account.lifecycleStatus,
+    }),
   ])
 
   const metaReady = Boolean(

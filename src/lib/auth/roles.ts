@@ -84,6 +84,8 @@ export const ADMIN_API_ROUTE_PREFIXES = [
   "/api/flows",
   "/api/integrations",
   "/api/marketing",
+  "/api/meta/onboarding",
+  "/api/meta/public-config",
   "/api/whatsapp/broadcast",
   "/api/whatsapp/embedded-signup",
   "/api/whatsapp/templates/submit",

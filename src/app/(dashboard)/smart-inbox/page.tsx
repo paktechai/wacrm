@@ -7,6 +7,13 @@ import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
 import { ConversationIntelligenceBar } from "@/components/inbox/conversation-intelligence-bar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Conversation } from "@/types";
 
 type SmartConversation = Conversation & {
@@ -95,7 +102,30 @@ export default function SmartInboxPage() {
         <section className="overflow-hidden rounded-2xl border border-border bg-card">
           <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row">
             <label className="relative min-w-0 flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search contact, message, intent or channel" className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-3 text-sm outline-none focus:border-primary" /></label>
-            <label className="flex items-center gap-2 rounded-xl border border-border bg-background px-3"><Filter className="size-4 text-muted-foreground" /><select value={priority} onChange={(event) => setPriority(event.target.value)} className="bg-transparent py-2 text-sm outline-none"><option value="all">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select></label>
+            <Select
+              value={priority}
+              onValueChange={(value) => {
+                if (value) setPriority(value);
+              }}
+            >
+              <SelectTrigger
+                aria-label="Filter by priority"
+                className="h-9 w-full rounded-xl border-border bg-background px-3 text-foreground shadow-none hover:bg-muted/40 sm:w-44 dark:bg-background dark:hover:bg-muted/40"
+              >
+                <Filter className="size-4 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent
+                align="start"
+                className="border border-border bg-popover text-popover-foreground shadow-xl"
+              >
+                <SelectItem value="all">All priorities</SelectItem>
+                <SelectItem value="urgent">Urgent</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="divide-y divide-border">
             {filtered.map((item) => {

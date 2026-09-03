@@ -29,8 +29,12 @@ function AvatarImage({ className, ...props }: AvatarPrimitive.Image.Props) {
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
+      decoding="async"
+      draggable={false}
+      width={128}
+      height={128}
       className={cn(
-        "aspect-square size-full rounded-full object-cover",
+        "block aspect-square size-full max-w-none rounded-full object-cover object-center [image-rendering:auto]",
         className
       )}
       {...props}

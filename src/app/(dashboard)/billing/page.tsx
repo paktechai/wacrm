@@ -5,16 +5,19 @@ import { getAccountEntitlements } from '@/lib/billing/entitlements'
 
 export default async function BillingPage() {
   const ctx = await getCurrentAccount()
-  const entitlements = await getAccountEntitlements(ctx.supabase, ctx.accountId)
-
   const now = new Date()
   const periodStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`
-  const { data: usageRows, error: usageError } = await ctx.supabase
-    .from('account_usage_monthly')
-    .select('metric, quantity, updated_at')
-    .eq('account_id', ctx.accountId)
-    .eq('period_start', periodStart)
-    .order('metric')
+  const [entitlements, { data: usageRows, error: usageError }] = await Promise.all([
+    getAccountEntitlements(ctx.supabase, ctx.accountId, {
+      lifecycleStatus: ctx.account.lifecycleStatus,
+    }),
+    ctx.supabase
+      .from('account_usage_monthly')
+      .select('metric, quantity, updated_at')
+      .eq('account_id', ctx.accountId)
+      .eq('period_start', periodStart)
+      .order('metric'),
+  ])
 
   if (usageError) {
     console.error('[billing page] usage load failed:', usageError)

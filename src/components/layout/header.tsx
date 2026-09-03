@@ -85,6 +85,8 @@ export function Header({ onOpenSidebar }: HeaderProps) {
                 <AvatarImage
                   src={profile.avatar_url}
                   alt={profile.full_name ?? t("defaultAvatar")}
+                  loading="eager"
+                  fetchPriority="high"
                 />
               ) : null}
               <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
