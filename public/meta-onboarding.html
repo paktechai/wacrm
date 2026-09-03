@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="/css/meta-onboarding.css">
+<button id="open-whatsapp-onboarding" class="w8-primary" type="button">Connect WhatsApp</button>
+<dialog id="whatsapp-onboarding-dialog" class="w8-dialog" aria-labelledby="w8-onboarding-heading">
+  <section class="w8-workspace">
+    <header class="w8-header">
+      <div>
+        <span class="w8-eyebrow">Wova8 setup workspace</span>
+        <span id="meta-runtime-badge" class="w8-sandbox-badge">Checking sandbox lock…</span>
+        <h2 id="w8-onboarding-heading">Connect a WhatsApp business line</h2>
+        <p>Choose the controlled onboarding path that matches this business.</p>
+      </div>
+      <button id="close-whatsapp-onboarding" class="w8-icon" type="button" aria-label="Close">×</button>
+    </header>
+    <div class="w8-grid">
+      <nav class="w8-paths" aria-label="Onboarding path">
+        <button type="button" data-onboarding-mode="fresh" aria-pressed="true"
+                data-title="Register a new phone and WABA"
+                data-help="Create or select business assets and register a new Cloud API business line.">
+          <strong>Register new line</strong><span>Fresh phone/WABA installation</span>
+        </button>
+        <button type="button" data-onboarding-mode="provider_migration" aria-pressed="false"
+                data-title="Migrate from an existing solution provider"
+                data-help="Use Meta's approved migration flow after the source WABA is eligible and prepared.">
+          <strong>Change provider</strong><span>Migrate an existing API number</span>
+        </button>
+        <button type="button" data-onboarding-mode="business_app_coexistence" aria-pressed="false"
+                data-title="Connect the WhatsApp Business app"
+                data-help="Keep the supported mobile Business app experience while connecting Wova8.">
+          <strong>Business App coexistence</strong><span>Hybrid mobile and Cloud API</span>
+        </button>
+      </nav>
+      <main class="w8-detail">
+        <span class="w8-secure">Encrypted tenant-isolated connection</span>
+        <aside class="w8-sandbox-notice" role="note">
+          Live WABAs and phone numbers are blocked. Fresh mode verifies only the configured Meta Test WABA.
+          Migration and Business App coexistence run UI/state simulations until a separate non-critical eligible
+          number is approved for those Meta-side tests.
+        </aside>
+        <h3 id="onboarding-mode-title">Register a new phone and WABA</h3>
+        <p id="onboarding-mode-help">Create or select business assets and register a new Cloud API business line.</p>
+        <ul>
+          <li>Meta confirms business ownership and permissions.</li>
+          <li>Wova8 verifies the WABA and phone ID before saving.</li>
+          <li>The issued business token is encrypted server-side.</li>
+        </ul>
+        <button id="connect-whatsapp" class="w8-primary" type="button">Continue with Meta</button>
+        <p id="connect-whatsapp-status" class="w8-status" role="status" aria-live="polite"></p>
+      </main>
+    </div>
+  </section>
+</dialog>
+<script type="module" src="/js/meta-embedded-signup.js"></script>
