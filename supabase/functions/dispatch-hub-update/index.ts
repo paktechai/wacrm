@@ -1,3 +1,8 @@
+declare const Deno: {
+  env: { get(name: string): string | undefined };
+  serve(handler: (request: Request) => Response | Promise<Response>): void;
+};
+
 function env(name: string): string {
   const value = Deno.env.get(name);
   if (!value) throw new Error(`Missing ${name}`);
@@ -31,7 +36,7 @@ function constantTimeEqual(a: string, b: string): boolean {
   return result === 0;
 }
 
-Deno.serve(async (request) => {
+Deno.serve(async (request: Request) => {
   try {
     if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 });
     const supplied = request.headers.get('x-wova8-webhook-secret') || '';
