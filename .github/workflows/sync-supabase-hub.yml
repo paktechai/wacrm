@@ -1,0 +1,47 @@
+name: Sync published Supabase app to Hub
+
+on:
+  repository_dispatch:
+    types: [supabase-hub-app-published]
+
+permissions:
+  contents: write
+
+env:
+  TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+
+concurrency:
+  group: sync-supabase-hub-main
+  cancel-in-progress: false
+
+jobs:
+  update-hub:
+    if: github.event.client_payload.environment == 'production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+
+      - name: Verify payload and update data/hub.json
+        env:
+          HUB_RECORD_JSON: ${{ toJson(github.event.client_payload.record) }}
+          HUB_SIGNATURE: ${{ github.event.client_payload.signature }}
+          HUB_DISPATCH_SIGNING_SECRET: ${{ secrets.HUB_DISPATCH_SIGNING_SECRET }}
+        run: node scripts/sync-hub.mjs
+
+      - name: Commit published card
+        run: |
+          if git diff --quiet -- data/hub.json; then
+            echo "Hub already synchronized"
+            exit 0
+          fi
+          git config user.name "wova8-hub-bot"
+          git config user.email "wova8-hub-bot@users.noreply.github.com"
+          git add data/hub.json
+          git commit -m "chore(hub): sync published app"
+          git pull --rebase origin "$TARGET_BRANCH"
+          git push origin "HEAD:$TARGET_BRANCH"
