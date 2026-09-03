@@ -115,10 +115,7 @@ function fmtDate(iso: string): string {
   });
 }
 
-function fmtExpiresIn(
-  iso: string,
-  t: (key: string, values?: Record<string, string | number>) => string
-): string {
+function fmtExpiresIn(iso: string, t: (key: string, values?: Record<string, string | number>) => string): string {
   const ms = new Date(iso).getTime() - Date.now();
   if (ms <= 0) return t('expired');
   const days = Math.floor(ms / (24 * 60 * 60 * 1000));
@@ -136,25 +133,19 @@ export function MembersTab() {
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
-  const [invitationsLoading, setInvitationsLoading] =
-    useState(canManageMembers);
+  const [invitationsLoading, setInvitationsLoading] = useState(canManageMembers);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [removingMember, setRemovingMember] = useState<Member | null>(null);
   const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(
-    null
+    null,
   );
 
   const loadEverything = useCallback(async () => {
     setMembersLoading(true);
     setInvitationsLoading(canManageMembers);
 
-    // The invitation route has extra admin checks and must never hold the
-    // roster hostage. Both requests start together, but each section paints
-    // as soon as its own response arrives.
-    const membersRequest = fetch('/api/account/members', {
-      cache: 'no-store',
-    })
+    const membersRequest = fetch('/api/account/members', { cache: 'no-store' })
       .then(async (response) => {
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));
@@ -165,9 +156,7 @@ export function MembersTab() {
       })
       .catch((err: unknown) => {
         console.error('[MembersTab] members load error:', err);
-        toast.error(
-          err instanceof Error ? err.message : 'Could not reach the server'
-        );
+        toast.error(err instanceof Error ? err.message : 'Could not reach the server');
       })
       .finally(() => setMembersLoading(false));
 
@@ -178,16 +167,12 @@ export function MembersTab() {
               const payload = await response.json().catch(() => ({}));
               throw new Error(payload.error || 'Failed to load invitations');
             }
-            const data = (await response.json()) as {
-              invitations: Invitation[];
-            };
+            const data = (await response.json()) as { invitations: Invitation[] };
             setInvitations(data.invitations);
           })
           .catch((err: unknown) => {
             console.error('[MembersTab] invitations load error:', err);
-            toast.error(
-              err instanceof Error ? err.message : 'Could not reach the server'
-            );
+            toast.error(err instanceof Error ? err.message : 'Could not reach the server');
           })
           .finally(() => setInvitationsLoading(false))
       : Promise.resolve(setInvitations([]));
@@ -208,8 +193,8 @@ export function MembersTab() {
     setPendingMemberAction(member.user_id);
     setMembers((prev) =>
       prev.map((m) =>
-        m.user_id === member.user_id ? { ...m, role: nextRole } : m
-      )
+        m.user_id === member.user_id ? { ...m, role: nextRole } : m,
+      ),
     );
     try {
       const res = await fetch(`/api/account/members/${member.user_id}`, {
@@ -225,25 +210,20 @@ export function MembersTab() {
         // `member.role === nextRole` guard at the top).
         setMembers((prev) =>
           prev.map((m) =>
-            m.user_id === member.user_id ? { ...m, role: previousRole } : m
-          )
+            m.user_id === member.user_id ? { ...m, role: previousRole } : m,
+          ),
         );
         const payload = await res.json().catch(() => ({}));
         toast.error(payload.error || 'Failed to update role');
         return;
       }
-      toast.success(
-        t('updatedToast', {
-          name: member.full_name || t('unnamed'),
-          role: tRoles(nextRole),
-        })
-      );
+      toast.success(t('updatedToast', { name: member.full_name || t('unnamed'), role: tRoles(nextRole) }));
     } catch (err) {
       // Same revert on network failure.
       setMembers((prev) =>
         prev.map((m) =>
-          m.user_id === member.user_id ? { ...m, role: previousRole } : m
-        )
+          m.user_id === member.user_id ? { ...m, role: previousRole } : m,
+        ),
       );
       console.error('[MembersTab] role change error:', err);
       toast.error('Could not reach the server');
@@ -258,18 +238,16 @@ export function MembersTab() {
     try {
       const res = await fetch(
         `/api/account/members/${removingMember.user_id}`,
-        { method: 'DELETE' }
+        { method: 'DELETE' },
       );
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
         toast.error(payload.error || 'Failed to remove member');
         return;
       }
-      toast.success(
-        t('removedToast', { name: removingMember.full_name || t('unnamed') })
-      );
+      toast.success(t('removedToast', { name: removingMember.full_name || t('unnamed') }));
       setMembers((prev) =>
-        prev.filter((m) => m.user_id !== removingMember.user_id)
+        prev.filter((m) => m.user_id !== removingMember.user_id),
       );
       setRemovingMember(null);
     } catch (err) {
@@ -319,7 +297,7 @@ export function MembersTab() {
         (() => {
           const counts = summarize(members.map((m) => getPresence(m.user_id)));
           return (
-            <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <PresenceDot status="online" />
                 {counts.online} {t('online')}
@@ -345,165 +323,162 @@ export function MembersTab() {
           {membersLoading && members.length === 0 ? (
             <div className="space-y-4 p-4" aria-label={t('title')}>
               {[0, 1, 2].map((row) => (
-                <div
-                  key={row}
-                  className="flex animate-pulse items-center gap-4"
-                >
-                  <div className="bg-muted size-9 shrink-0 rounded-full" />
+                <div key={row} className="flex animate-pulse items-center gap-4">
+                  <div className="size-9 shrink-0 rounded-full bg-muted" />
                   <div className="min-w-0 flex-1 space-y-2">
-                    <div className="bg-muted h-4 w-36 rounded" />
-                    <div className="bg-muted h-3 w-52 max-w-full rounded" />
+                    <div className="h-4 w-36 rounded bg-muted" />
+                    <div className="h-3 w-52 max-w-full rounded bg-muted" />
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <ul className="divide-border divide-y">
-              {members.map((member) => {
-                const roleMeta = ROLE_META[member.role];
-                const RoleIcon = roleMeta.icon;
-                const isSelf = member.user_id === user?.id;
-                const isOwnerRow = member.role === 'owner';
-                const isBusy = pendingMemberAction === member.user_id;
-                const presence = getPresence(member.user_id);
-                const presenceRow = getRow(member.user_id);
-                const presenceText = presenceLabel(
-                  presence,
-                  presenceRow?.last_seen_at ?? null,
-                  now
-                );
+          <ul className="divide-y divide-border">
+            {members.map((member) => {
+              const roleMeta = ROLE_META[member.role];
+              const RoleIcon = roleMeta.icon;
+              const isSelf = member.user_id === user?.id;
+              const isOwnerRow = member.role === 'owner';
+              const isBusy = pendingMemberAction === member.user_id;
+              const presence = getPresence(member.user_id);
+              const presenceRow = getRow(member.user_id);
+              const presenceText = presenceLabel(
+                presence,
+                presenceRow?.last_seen_at ?? null,
+                now,
+              );
 
-                return (
-                  <li
-                    key={member.user_id}
-                    // Mobile: stack identity (avatar+name+email) above the
-                    // role/remove actions so the role dropdown's fixed
-                    // 128px width doesn't force the name into a 50-pixel
-                    // truncation. Desktop (sm+): everything inline as
-                    // before.
-                    className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4"
-                  >
-                    <div className="flex min-w-0 flex-1 items-center gap-4">
-                      <Tooltip>
-                        <TooltipTrigger
-                          render={
-                            <Avatar className="size-9 shrink-0">
-                              {member.avatar_url ? (
-                                <AvatarImage
-                                  src={member.avatar_url}
-                                  alt={member.full_name || 'Member'}
-                                />
-                              ) : null}
-                              <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-                                {(member.full_name || member.email || 'U')
-                                  .charAt(0)
-                                  .toUpperCase()}
-                              </AvatarFallback>
-                              {/* role+label so screen readers announce
+              return (
+                <li
+                  key={member.user_id}
+                  // Mobile: stack identity (avatar+name+email) above the
+                  // role/remove actions so the role dropdown's fixed
+                  // 128px width doesn't force the name into a 50-pixel
+                  // truncation. Desktop (sm+): everything inline as
+                  // before.
+                  className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-4">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Avatar className="size-9 shrink-0">
+                            {member.avatar_url ? (
+                              <AvatarImage
+                                src={member.avatar_url}
+                                alt={member.full_name || 'Member'}
+                              />
+                            ) : null}
+                            <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
+                              {(member.full_name || member.email || 'U')
+                                .charAt(0)
+                                .toUpperCase()}
+                            </AvatarFallback>
+                            {/* role+label so screen readers announce
                                 presence — the hover tooltip alone isn't
                                 reachable by keyboard/AT on a non-focusable
                                 avatar. */}
-                              <AvatarBadge
-                                role="img"
-                                aria-label={presenceText}
-                                className={PRESENCE_DOT_CLASS[presence]}
-                              />
-                            </Avatar>
-                          }
-                        />
-                        <TooltipContent>{presenceText}</TooltipContent>
-                      </Tooltip>
+                            <AvatarBadge
+                              role="img"
+                              aria-label={presenceText}
+                              className={PRESENCE_DOT_CLASS[presence]}
+                            />
+                          </Avatar>
+                        }
+                      />
+                      <TooltipContent>{presenceText}</TooltipContent>
+                    </Tooltip>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-foreground truncate text-sm font-medium">
-                            {member.full_name || t('unnamed')}
-                          </span>
-                          {isSelf && (
-                            <Badge className="bg-muted text-muted-foreground border-border text-[10px] tracking-wide uppercase">
-                              {t('you')}
-                            </Badge>
-                          )}
-                        </div>
-                        {member.email && (
-                          <p className="text-muted-foreground truncate text-xs">
-                            {member.email}
-                          </p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium text-foreground">
+                          {member.full_name || t('unnamed')}
+                        </span>
+                        {isSelf && (
+                          <Badge className="bg-muted text-muted-foreground border-border text-[10px] uppercase tracking-wide">
+                            {t('you')}
+                          </Badge>
                         )}
                       </div>
+                      {member.email && (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {member.email}
+                        </p>
+                      )}
                     </div>
+                  </div>
 
-                    {/* Joined date stays desktop-only. The mobile row's
+                  {/* Joined date stays desktop-only. The mobile row's
                       vertical density makes the joined date noise. */}
-                    <div className="text-muted-foreground hidden text-right text-xs sm:block">
-                      {t('joined', { date: fmtDate(member.joined_at) })}
-                    </div>
+                  <div className="hidden sm:block text-right text-xs text-muted-foreground">
+                    {t('joined', { date: fmtDate(member.joined_at) })}
+                  </div>
 
-                    {/* Actions cluster. On mobile this is its own row
+                  {/* Actions cluster. On mobile this is its own row
                       below the identity block; on desktop it sits
                       inline. Items align to the start on mobile so the
                       role dropdown lines up under the avatar. */}
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      {/* Role display / editor. Inline Select is admin+
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    {/* Role display / editor. Inline Select is admin+
                         only AND not allowed on the owner row (owner
                         changes go through transfer, which lands later). */}
-                      {canManageMembers && !isOwnerRow && !isSelf ? (
-                        <Select
-                          value={member.role}
-                          onValueChange={(v) =>
-                            // Base UI Select can emit null on clear. We
-                            // don't expose a clear affordance, so the
-                            // guard is defensive — but the typed
-                            // signature requires it.
-                            v && handleRoleChange(member, v as AccountRole)
-                          }
+                    {canManageMembers && !isOwnerRow && !isSelf ? (
+                      <Select
+                        value={member.role}
+                        onValueChange={(v) =>
+                          // Base UI Select can emit null on clear. We
+                          // don't expose a clear affordance, so the
+                          // guard is defensive — but the typed
+                          // signature requires it.
+                          v && handleRoleChange(member, v as AccountRole)
+                        }
+                      >
+                        <SelectTrigger
+                          className="w-32 bg-muted border-border text-foreground"
+                          disabled={isBusy}
                         >
-                          <SelectTrigger
-                            className="bg-muted border-border text-foreground w-32"
-                            disabled={isBusy}
-                          >
-                            <SelectValue>{tRoles(member.role)}</SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {EDITABLE_ROLES.map((r) => (
-                              <SelectItem key={r.value} value={r.value}>
-                                {tRoles(r.value)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium ${roleMeta.className}`}
-                        >
-                          <RoleIcon className="size-3.5" />
-                          {tRoles(member.role)}
-                        </span>
-                      )}
+                          <SelectValue>{tRoles(member.role)}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EDITABLE_ROLES.map((r) => (
+                            <SelectItem key={r.value} value={r.value}>
+                              {tRoles(r.value)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium ${roleMeta.className}`}
+                      >
+                        <RoleIcon className="size-3.5" />
+                        {tRoles(member.role)}
+                      </span>
+                    )}
 
-                      {/* Remove. Admin+ only; never on the owner row;
+                    {/* Remove. Admin+ only; never on the owner row;
                         never on yourself. Pre-polish styling was
                         neutral-default + red-on-hover — the
                         destructive intent was invisible until the
                         user moused over. Now red is the default
                         state with a darker shade on hover so the
                         affordance reads at-a-glance. */}
-                      {canManageMembers && !isOwnerRow && !isSelf && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setRemovingMember(member)}
-                          disabled={isBusy}
-                          className="border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                    {canManageMembers && !isOwnerRow && !isSelf && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setRemovingMember(member)}
+                        disabled={isBusy}
+                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
           )}
         </CardContent>
       </Card>
@@ -512,16 +487,12 @@ export function MembersTab() {
       <RequireRole min="admin">
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <UsersRound className="text-muted-foreground size-4" />
-            <h3 className="text-foreground text-sm font-semibold">
+            <UsersRound className="size-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground">
               {t('pendingInvitations')}
             </h3>
             <Badge className="bg-muted text-muted-foreground border-border">
-              {invitationsLoading ? (
-                <Loader2 className="size-3 animate-spin" />
-              ) : (
-                invitations.length
-              )}
+              {invitationsLoading ? <Loader2 className="size-3 animate-spin" /> : invitations.length}
             </Badge>
           </div>
           {/* P10 — make the no-resend design explicit. Admins were
@@ -530,7 +501,7 @@ export function MembersTab() {
               front (rather than letting the user discover it by
               looking for a button) keeps it from feeling like a bug. */}
           {invitations.length > 0 ? (
-            <p className="text-muted-foreground mb-3 text-xs">
+            <p className="mb-3 text-xs text-muted-foreground">
               {t('inviteHint')}
             </p>
           ) : null}
@@ -540,8 +511,8 @@ export function MembersTab() {
               <CardContent className="space-y-3 py-5">
                 {[0, 1].map((row) => (
                   <div key={row} className="animate-pulse space-y-2">
-                    <div className="bg-muted h-4 w-32 rounded" />
-                    <div className="bg-muted h-3 w-48 max-w-full rounded" />
+                    <div className="h-4 w-32 rounded bg-muted" />
+                    <div className="h-3 w-48 max-w-full rounded bg-muted" />
                   </div>
                 ))}
               </CardContent>
@@ -549,61 +520,58 @@ export function MembersTab() {
           ) : invitations.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Mail className="text-muted-foreground size-6" />
-                <p className="text-muted-foreground mt-2 text-sm">
+                <Mail className="size-6 text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">
                   {t('noPendingTitle')}
                 </p>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {t.rich('noPendingDesc', {
-                    bold: (chunks) => <strong>{chunks}</strong>,
-                  })}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t.rich('noPendingDesc', { bold: (chunks) => <strong>{chunks}</strong> })}
                 </p>
               </CardContent>
             </Card>
           ) : (
             <Card>
               <CardContent className="p-0">
-                <ul className="divide-border divide-y">
+                <ul className="divide-y divide-border">
                   {invitations.map((inv) => {
                     const inviteRoleMeta = ROLE_META[inv.role];
                     const InviteRoleIcon = inviteRoleMeta.icon;
                     return (
-                      <li
-                        key={inv.id}
-                        className="flex items-center gap-4 px-4 py-3"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-foreground text-sm font-medium">
-                              {inv.label || t('untitledInvite')}
-                            </span>
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium ${inviteRoleMeta.className}`}
-                            >
-                              <InviteRoleIcon className="size-3" />
-                              {tRoles(inv.role)}
-                            </span>
-                          </div>
-                          <p className="text-muted-foreground mt-0.5 text-xs">
-                            {t('created', { date: fmtDate(inv.created_at) })} ·{' '}
-                            {fmtExpiresIn(inv.expires_at, t)}
-                          </p>
+                    <li
+                      key={inv.id}
+                      className="flex items-center gap-4 px-4 py-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-foreground">
+                            {inv.label || t('untitledInvite')}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium ${inviteRoleMeta.className}`}
+                          >
+                            <InviteRoleIcon className="size-3" />
+                            {tRoles(inv.role)}
+                          </span>
                         </div>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {t('created', { date: fmtDate(inv.created_at) })} · {fmtExpiresIn(inv.expires_at, t)}
+                        </p>
+                      </div>
 
-                        {/* Revoke: red default state, mirrors the
+                      {/* Revoke: red default state, mirrors the
                           members-tab Remove button. Pre-polish version
                           read as a neutral secondary button until
                           hover. */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRevoke(inv)}
-                          className="border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
-                        >
-                          <MailX className="size-4" />
-                          {t('revoke')}
-                        </Button>
-                      </li>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRevoke(inv)}
+                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
+                      >
+                        <MailX className="size-4" />
+                        {t('revoke')}
+                      </Button>
+                    </li>
                     );
                   })}
                 </ul>
@@ -627,14 +595,14 @@ export function MembersTab() {
       >
         <DialogContent className="bg-popover border-border sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-popover-foreground flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-popover-foreground">
               <AlertTriangle className="size-4 text-amber-400" />
               {t('removeDialogTitle')}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              {t.rich('removeDialogDesc', {
+              {t.rich('removeDialogDesc', { 
                 name: removingMember?.full_name || t('unnamed'),
-                bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>,
+                bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>
               })}
             </DialogDescription>
           </DialogHeader>
@@ -649,7 +617,7 @@ export function MembersTab() {
             <Button
               onClick={handleRemove}
               disabled={!!pendingMemberAction}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               {pendingMemberAction ? (
                 <>

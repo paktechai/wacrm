@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
-import { useTranslations } from 'next-intl';
-import { cn } from '@/lib/utils';
-import { BrandMark } from '@/components/brand/brand-mark';
-import { useAuth } from '@/hooks/use-auth';
-import { useTotalUnread } from '@/hooks/use-total-unread';
-import { useUnreadNotifications } from '@/hooks/use-unread-notifications';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/brand/brand-mark";
+import { useAuth } from "@/hooks/use-auth";
+import { useTotalUnread } from "@/hooks/use-total-unread";
+import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
 import {
   Bell,
   Bot,
@@ -35,20 +35,24 @@ import {
   Workflow,
   X,
   Zap,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   canAccessWorkspaceRoute,
   isAdminWorkspaceRoute,
   type AccountRole,
-} from '@/lib/auth/roles';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+} from "@/lib/auth/roles";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 
 const ROLE_CHIP: Record<
   AccountRole,
@@ -56,23 +60,23 @@ const ROLE_CHIP: Record<
 > = {
   owner: {
     icon: Crown,
-    labelKey: 'roleOwner',
-    className: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+    labelKey: "roleOwner",
+    className: "border-amber-500/40 bg-amber-500/10 text-amber-300",
   },
   admin: {
     icon: Shield,
-    labelKey: 'roleAdmin',
-    className: 'border-primary/40 bg-primary/10 text-primary',
+    labelKey: "roleAdmin",
+    className: "border-primary/40 bg-primary/10 text-primary",
   },
   agent: {
     icon: UserCog,
-    labelKey: 'roleAgent',
-    className: 'border-border bg-muted text-foreground',
+    labelKey: "roleAgent",
+    className: "border-border bg-muted text-foreground",
   },
   viewer: {
     icon: User,
-    labelKey: 'roleViewer',
-    className: 'border-border bg-card text-muted-foreground',
+    labelKey: "roleViewer",
+    className: "border-border bg-card text-muted-foreground",
   },
 };
 
@@ -87,28 +91,28 @@ interface NavItem {
 // Product language is relationship-first while stable routes remain unchanged
 // for bookmarks, APIs, integrations, and migration compatibility.
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Command Center', icon: LayoutDashboard },
-  { href: '/inbox', label: 'Unified Inbox', icon: MessageSquare },
-  { href: '/smart-inbox', label: 'Smart Inbox', icon: Sparkles },
-  { href: '/notifications', labelKey: 'notifications', icon: Bell },
-  { href: '/contacts', label: 'Relationships', icon: Users },
-  { href: '/crm', label: 'CRM 2.0', icon: BriefcaseBusiness },
-  { href: '/pipelines', labelKey: 'pipelines', icon: GitBranch },
-  { href: '/marketing', label: 'Marketing', icon: Megaphone },
-  { href: '/broadcasts', label: 'Campaigns', icon: Radio },
-  { href: '/automations', labelKey: 'automations', icon: Zap },
-  { href: '/flows', labelKey: 'flows', icon: Workflow, beta: true },
-  { href: '/agents', label: 'AI Relationship Agents', icon: Bot },
-  { href: '/intelligence', label: 'Intelligence', icon: Sparkles },
-  { href: '/commerce', label: 'Commerce', icon: ShoppingBag },
+  { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
+  { href: "/inbox", label: "Unified Inbox", icon: MessageSquare },
+  { href: "/smart-inbox", label: "Smart Inbox", icon: Sparkles },
+  { href: "/notifications", labelKey: "notifications", icon: Bell },
+  { href: "/contacts", label: "Relationships", icon: Users },
+  { href: "/crm", label: "CRM 2.0", icon: BriefcaseBusiness },
+  { href: "/pipelines", labelKey: "pipelines", icon: GitBranch },
+  { href: "/marketing", label: "Marketing", icon: Megaphone },
+  { href: "/broadcasts", label: "Campaigns", icon: Radio },
+  { href: "/automations", labelKey: "automations", icon: Zap },
+  { href: "/flows", labelKey: "flows", icon: Workflow, beta: true },
+  { href: "/agents", label: "AI Relationship Agents", icon: Bot },
+  { href: "/intelligence", label: "Intelligence", icon: Sparkles },
+  { href: "/commerce", label: "Commerce", icon: ShoppingBag },
 ];
 
 const bottomNavItems: NavItem[] = [
-  { href: '/integrations', label: 'Channels & integrations', icon: PlugZap },
-  { href: '/enterprise', label: 'Enterprise', icon: ShieldCheck },
-  { href: '/onboarding', label: 'Setup', icon: Rocket },
-  { href: '/billing', label: 'Plan & usage', icon: CreditCard },
-  { href: '/settings', labelKey: 'settings', icon: Settings },
+  { href: "/integrations", label: "Channels & integrations", icon: PlugZap },
+  { href: "/enterprise", label: "Enterprise", icon: ShieldCheck },
+  { href: "/onboarding", label: "Setup", icon: Rocket },
+  { href: "/billing", label: "Plan & usage", icon: CreditCard },
+  { href: "/settings", labelKey: "settings", icon: Settings },
 ];
 
 interface SidebarProps {
@@ -117,7 +121,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ open = false, onClose }: SidebarProps) {
-  const t = useTranslations('Sidebar');
+  const t = useTranslations("Sidebar");
   const pathname = usePathname();
   const {
     profile,
@@ -137,10 +141,12 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       : !isAdminWorkspaceRoute(href);
   const visibleNavItems = navItems.filter((item) => canSeeRoute(item.href));
   const visibleBottomNavItems = bottomNavItems.filter((item) =>
-    canSeeRoute(item.href)
+    canSeeRoute(item.href),
   );
   const showAccountStrip =
-    !profileLoading && !!account?.name && account.name !== profile?.full_name;
+    !profileLoading &&
+    !!account?.name &&
+    account.name !== profile?.full_name;
 
   useEffect(() => {
     onClose?.();
@@ -150,14 +156,14 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose?.();
+      if (event.key === "Escape") onClose?.();
     };
-    window.addEventListener('keydown', onKey);
+    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', onKey);
+      window.removeEventListener("keydown", onKey);
     };
   }, [open, onClose]);
 
@@ -165,37 +171,34 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
     <>
       <button
         type="button"
-        aria-label={t('closeMenu')}
+        aria-label={t("closeMenu")}
         onClick={onClose}
         className={cn(
-          'bg-background/70 fixed inset-0 z-30 backdrop-blur-sm transition-opacity lg:hidden',
+          "fixed inset-0 z-30 bg-background/70 backdrop-blur-sm transition-opacity lg:hidden",
           open
-            ? 'pointer-events-auto opacity-100'
-            : 'pointer-events-none opacity-0'
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0",
         )}
       />
 
       <aside
         className={cn(
-          'border-border bg-card fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r',
-          'transition-transform duration-200 ease-out will-change-transform',
-          open ? 'translate-x-0' : '-translate-x-full',
-          'lg:static lg:z-0 lg:w-60 lg:translate-x-0 lg:transition-none'
+          "fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-border bg-card",
+          "transition-transform duration-200 ease-out will-change-transform",
+          open ? "translate-x-0" : "-translate-x-full",
+          "lg:static lg:z-0 lg:w-60 lg:translate-x-0 lg:transition-none",
         )}
         aria-label="Primary"
       >
-        <div className="border-border flex h-14 shrink-0 items-center justify-between gap-2 border-b px-4">
-          <Link
-            href="/dashboard"
-            className="group flex min-w-0 items-center gap-2.5"
-          >
+        <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
+          <Link href="/dashboard" className="group flex min-w-0 items-center gap-2.5">
             <BrandMark compact />
           </Link>
           <button
             type="button"
             onClick={onClose}
-            aria-label={t('closeMenu')}
-            className="text-muted-foreground hover:bg-muted hover:text-foreground flex h-9 w-9 items-center justify-center rounded-md lg:hidden"
+            aria-label={t("closeMenu")}
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
@@ -206,54 +209,49 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             {visibleNavItems.map((item) => {
               const isActive =
                 pathname === item.href ||
-                (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                (item.href !== "/dashboard" && pathname.startsWith(item.href));
               const showUnreadDot =
-                item.href === '/inbox' && totalUnread > 0 && !isActive;
+                item.href === "/inbox" && totalUnread > 0 && !isActive;
               const showNotificationBadge =
-                item.href === '/notifications' && unreadNotifications > 0;
-              const label =
-                item.label ?? (item.labelKey ? t(item.labelKey) : '');
+                item.href === "/notifications" && unreadNotifications > 0;
+              const label = item.label ?? (item.labelKey ? t(item.labelKey) : "");
 
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
                     className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2',
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
                       isActive
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
                     <item.icon className="h-4 w-4" />
                     <span className="flex-1">{label}</span>
                     {item.beta && (
                       <span
-                        aria-label={t('beta')}
-                        className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-amber-300 uppercase"
+                        aria-label={t("beta")}
+                        className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-300"
                       >
-                        {t('beta')}
+                        {t("beta")}
                       </span>
                     )}
                     {showUnreadDot && (
                       <span
-                        aria-label={t('unreadConversations', {
-                          count: totalUnread,
-                        })}
+                        aria-label={t("unreadConversations", { count: totalUnread })}
                         className="relative flex h-2 w-2"
                       >
-                        <span className="bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
-                        <span className="bg-primary relative inline-flex h-2 w-2 rounded-full" />
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
                       </span>
                     )}
                     {showNotificationBadge && (
                       <span
-                        aria-label={t('unreadNotifications', {
-                          count: unreadNotifications,
-                        })}
-                        className="bg-primary text-primary-foreground flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold"
+                        aria-label={t("unreadNotifications", { count: unreadNotifications })}
+                        className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground"
                       >
-                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                        {unreadNotifications > 9 ? "9+" : unreadNotifications}
                       </span>
                     )}
                   </Link>
@@ -264,7 +262,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
           {visibleBottomNavItems.length > 0 ? (
             <>
-              <div className="border-border my-4 border-t" />
+              <div className="my-4 border-t border-border" />
               <ul className="flex flex-col gap-1">
                 {visibleBottomNavItems.map((item) => {
                   const isActive = pathname.startsWith(item.href);
@@ -273,14 +271,14 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                       <Link
                         href={item.href}
                         className={cn(
-                          'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2',
+                          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
                           isActive
-                            ? 'bg-primary/10 text-primary'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
                         )}
                       >
                         <item.icon className="h-4 w-4" />
-                        {item.label ?? (item.labelKey ? t(item.labelKey) : '')}
+                        {item.label ?? (item.labelKey ? t(item.labelKey) : "")}
                       </Link>
                     </li>
                   );
@@ -290,21 +288,17 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           ) : null}
         </nav>
 
-        <div className="border-border shrink-0 border-t p-3">
+        <div className="shrink-0 border-t border-border p-3">
           {showAccountStrip && account?.name ? (
-            <div className="text-muted-foreground mb-2 flex items-center gap-2 px-3 text-xs">
+            <div className="mb-2 flex items-center gap-2 px-3 text-xs text-muted-foreground">
               <UsersRound className="size-3.5 shrink-0" />
-              <span className="truncate" title={account.name}>
-                {account.name}
-              </span>
+              <span className="truncate" title={account.name}>{account.name}</span>
               {accountRole
                 ? (() => {
                     const meta = ROLE_CHIP[accountRole];
                     const Icon = meta.icon;
                     return (
-                      <span
-                        className={`ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium tracking-wider uppercase ${meta.className}`}
-                      >
+                      <span className={`ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${meta.className}`}>
                         <Icon className="size-3" />
                         {t(meta.labelKey as string)}
                       </span>
@@ -315,71 +309,40 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           ) : null}
 
           <DropdownMenu>
-            <DropdownMenuTrigger className="hover:bg-muted/60 focus:bg-muted/60 data-popup-open:bg-muted/60 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors focus:outline-none">
+            <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/60 focus:bg-muted/60 focus:outline-none data-popup-open:bg-muted/60">
               <Avatar className="size-8 shrink-0">
                 {profile?.avatar_url ? (
-                  <AvatarImage
-                    src={profile.avatar_url}
-                    alt={profile.full_name ?? t('defaultAvatar')}
-                    loading="eager"
-                  />
+                  <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? t("defaultAvatar")} loading="eager" />
                 ) : null}
-                <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
                   {profile?.full_name?.charAt(0)?.toUpperCase() ??
                     profile?.email?.charAt(0)?.toUpperCase() ??
-                    'U'}
+                    "U"}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="text-foreground truncate text-sm font-medium">
-                  {profile?.full_name ?? t('defaultUser')}
+                <p className="truncate text-sm font-medium text-foreground">
+                  {profile?.full_name ?? t("defaultUser")}
                 </p>
-                <p className="text-muted-foreground truncate text-xs">
-                  {profile?.email ?? ''}
+                <p className="truncate text-xs text-muted-foreground">
+                  {profile?.email ?? ""}
                 </p>
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              side="top"
-              sideOffset={6}
-              className="bg-popover text-popover-foreground ring-border min-w-56"
-            >
+            <DropdownMenuContent align="end" side="top" sideOffset={6} className="min-w-56 bg-popover text-popover-foreground ring-border">
               {canEditSettings ? (
                 <>
-                  <DropdownMenuItem
-                    render={
-                      <Link
-                        href="/settings?tab=profile"
-                        onClick={onClose}
-                        className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
-                      />
-                    }
-                  >
-                    <User className="size-4" />
-                    {t('menuProfile')}
+                  <DropdownMenuItem render={<Link href="/settings?tab=profile" onClick={onClose} className="text-popover-foreground focus:bg-accent focus:text-accent-foreground" />}>
+                    <User className="size-4" />{t("menuProfile")}
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    render={
-                      <Link
-                        href="/settings?tab=whatsapp"
-                        onClick={onClose}
-                        className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
-                      />
-                    }
-                  >
-                    <Settings className="size-4" />
-                    {t('menuSettings')}
+                  <DropdownMenuItem render={<Link href="/settings?tab=whatsapp" onClick={onClose} className="text-popover-foreground focus:bg-accent focus:text-accent-foreground" />}>
+                    <Settings className="size-4" />{t("menuSettings")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-border" />
                 </>
               ) : null}
-              <DropdownMenuItem
-                onClick={signOut}
-                className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
-              >
-                <LogOut className="size-4" />
-                {t('menuSignOut')}
+              <DropdownMenuItem onClick={signOut} className="text-popover-foreground focus:bg-accent focus:text-accent-foreground">
+                <LogOut className="size-4" />{t("menuSignOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

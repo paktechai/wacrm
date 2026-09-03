@@ -130,14 +130,12 @@ export function ApiKeysSettings() {
     <section className="animate-in fade-in-50 space-y-6 duration-200">
       <SettingsPanelHead
         title={t('title')}
-        description={t.rich('description', {
-          apiCode: (chunks: React.ReactNode) => (
-            <code className="text-xs">{chunks}</code>
-          ),
-          headerCode: (chunks: React.ReactNode) => (
-            <code className="text-xs">{chunks}</code>
-          ),
-        })}
+        description={
+          t.rich('description', {
+            apiCode: (chunks: React.ReactNode) => <code className="text-xs">{chunks}</code>,
+            headerCode: (chunks: React.ReactNode) => <code className="text-xs">{chunks}</code>
+          })
+        }
         action={
           <RequireRole min="admin">
             <Button onClick={() => setCreateOpen(true)}>
@@ -153,9 +151,9 @@ export function ApiKeysSettings() {
           <CardContent className="space-y-4 py-5">
             {[0, 1, 2].map((row) => (
               <div key={row} className="animate-pulse space-y-2">
-                <div className="bg-muted h-4 w-40 rounded" />
-                <div className="bg-muted h-3 w-24 rounded" />
-                <div className="bg-muted h-3 w-56 max-w-full rounded" />
+                <div className="h-4 w-40 rounded bg-muted" />
+                <div className="h-3 w-24 rounded bg-muted" />
+                <div className="h-3 w-56 max-w-full rounded bg-muted" />
               </div>
             ))}
           </CardContent>
@@ -374,9 +372,7 @@ function CreateKeyDialog({
             </DialogHeader>
 
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground">
-                {t('apiKeyLabel')}
-              </Label>
+              <Label className="text-muted-foreground">{t('apiKeyLabel')}</Label>
               <div className="flex gap-2">
                 <Input
                   readOnly
@@ -428,9 +424,7 @@ function CreateKeyDialog({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground">
-                  {t('scopesLabel')}
-                </Label>
+                <Label className="text-muted-foreground">{t('scopesLabel')}</Label>
                 <div className="border-border space-y-2 rounded-md border p-3">
                   {API_SCOPES.map((scope) => (
                     <label
