@@ -94,7 +94,7 @@ export function ApiKeysSettings() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -126,24 +126,18 @@ export function ApiKeysSettings() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="text-primary size-6 animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <section className="animate-in fade-in-50 space-y-6 duration-200">
       <SettingsPanelHead
         title={t('title')}
-        description={
-          t.rich('description', {
-            apiCode: (chunks: React.ReactNode) => <code className="text-xs">{chunks}</code>,
-            headerCode: (chunks: React.ReactNode) => <code className="text-xs">{chunks}</code>
-          })
-        }
+        description={t.rich('description', {
+          apiCode: (chunks: React.ReactNode) => (
+            <code className="text-xs">{chunks}</code>
+          ),
+          headerCode: (chunks: React.ReactNode) => (
+            <code className="text-xs">{chunks}</code>
+          ),
+        })}
         action={
           <RequireRole min="admin">
             <Button onClick={() => setCreateOpen(true)}>
@@ -154,7 +148,19 @@ export function ApiKeysSettings() {
         }
       />
 
-      {keys.length === 0 ? (
+      {loading ? (
+        <Card aria-busy="true" aria-label={t('title')}>
+          <CardContent className="space-y-4 py-5">
+            {[0, 1, 2].map((row) => (
+              <div key={row} className="animate-pulse space-y-2">
+                <div className="bg-muted h-4 w-40 rounded" />
+                <div className="bg-muted h-3 w-24 rounded" />
+                <div className="bg-muted h-3 w-56 max-w-full rounded" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : keys.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-10 text-center">
             <KeyRound className="text-muted-foreground size-6" />
@@ -270,7 +276,7 @@ export function ApiKeysSettings() {
       <CreateKeyDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        onCreated={load}
+        onCreated={(key) => setKeys((current) => [key, ...current])}
       />
     </section>
   );
@@ -287,7 +293,7 @@ function CreateKeyDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated: () => void;
+  onCreated: (key: ApiKey) => void;
 }) {
   const t = useTranslations('Settings.apiKeys');
   const [name, setName] = useState('');
@@ -328,7 +334,7 @@ function CreateKeyDialog({
         return;
       }
       setCreatedKey(payload.plaintext as string);
-      onCreated();
+      onCreated(payload.key as ApiKey);
     } catch (err) {
       console.error('[CreateKeyDialog] create error:', err);
       toast.error(t('networkError'));
@@ -368,7 +374,9 @@ function CreateKeyDialog({
             </DialogHeader>
 
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground">{t('apiKeyLabel')}</Label>
+              <Label className="text-muted-foreground">
+                {t('apiKeyLabel')}
+              </Label>
               <div className="flex gap-2">
                 <Input
                   readOnly
@@ -420,7 +428,9 @@ function CreateKeyDialog({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-muted-foreground">{t('scopesLabel')}</Label>
+                <Label className="text-muted-foreground">
+                  {t('scopesLabel')}
+                </Label>
                 <div className="border-border space-y-2 rounded-md border p-3">
                   {API_SCOPES.map((scope) => (
                     <label
